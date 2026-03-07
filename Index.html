@@ -557,7 +557,7 @@ function renderApp(data) {
 
   const level = currentSenti !== null ? getLevel(currentSenti) : { label: '–', color: '#4a6080', bg: 'transparent' };
 
-  const hasTomorrow = tomorrowData.length > 0;
+  const hasTomorrow = tomorrowData.length > 0 && tomorrowData.some(d => d.price > 0);
 
   document.getElementById('statusText').textContent = 'REAALAEG · ' + now.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
 
