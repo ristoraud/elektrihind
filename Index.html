@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elektrihind EE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0e14;
+    --surface: #111720;
+    --border: #1e2a38;
+    --accent: #00e5a0;
+    --accent2: #ff6b35;
+    --accent3: #3b82f6;
+    --text: #e8f0f8;
+    --muted: #4a6080;
+    --cheap: #00e5a0;
+    --mid: #f0c040;
+    --expensive: #ff4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+    color: var(--text);
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Current price hero */
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .current-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .current-price {
+    font-size: clamp(48px, 8vw, 80px);
+    font-weight: 800;
+    letter-spacing: -3px;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+
+  .current-unit {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .current-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .price-tag {
+    text-align: right;
+  }
+
+  .price-level {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+
+  .change {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Stats row */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+
+  .stat-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Chart */
+  .chart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+  }
+
+  canvas#priceChart {
+    width: 100% !important;
+    height: 200px !important;
+  }
+
+  /* Hourly list */
+  .hours-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .hours-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .hour-cell {
+    border-radius: 10px;
+    padding: 10px 6px;
+    text-align: center;
+    border: 1px solid transparent;
+    cursor: default;
+    transition: transform 0.15s, border-color 0.15s;
+    position: relative;
+  }
+
+  .hour-cell:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  .hour-cell.current-hour {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 12px rgba(0,229,160,0.2);
+  }
+
+  .hour-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .hour-price {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    gap: 16px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: rgba(255,68,68,0.1);
+    border: 1px solid rgba(255,68,68,0.3);
+    border-radius: 12px;
+    padding: 20px;
+    color: #ff8888;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .info-note {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  footer {
+    text-align: center;
+    padding: 32px 0 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    .hero { grid-template-columns: 1fr; }
+    .price-tag { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div>
+      <div class="logo">⚡ Eesti Energia</div>
+      <h1>Elektrihind</h1>
+    </div>
+    <div class="status-badge">
+      <div class="dot"></div>
+      <span id="statusText">Laadin...</span>
+    </div>
+  </header>
+
+  <div id="appContent">
+    <div class="loading">
+      <div class="spinner"></div>
+      LAADIN ANDMEID
+    </div>
+  </div>
+
+  <footer>
+    Andmed: <a href="https://dashboard.elering.ee" target="_blank">Elering NPS API</a> &nbsp;·&nbsp; Hinnad €/MWh (sisaldab käibemaksu 24%, ilma võrguteenuseta) &nbsp;·&nbsp; Nord Pool EE piirkond
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const API_BASE = '/api/prices';
+
+let allData = [];
+let chartInstance = null;
+let currentTab = 'today';
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function formatDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function euroPerMWh_to_senti(v) {
+  // EUR/MWh → senti/kWh (×0.1), with 22% VAT
+  return (v * 0.1 * 1.24).toFixed(2);
+}
+
+function getColor(price) {
+  if (price < 5) return getComputedStyle(document.documentElement).getPropertyValue('--cheap').trim();
+  if (price < 12) return getComputedStyle(document.documentElement).getPropertyValue('--mid').trim();
+  return getComputedStyle(document.documentElement).getPropertyValue('--expensive').trim();
+}
+
+function getLevel(price) {
+  if (price < 5) return { label: 'ODAV', color: '#00e5a0', bg: 'rgba(0,229,160,0.1)' };
+  if (price < 12) return { label: 'KESKMINE', color: '#f0c040', bg: 'rgba(240,192,64,0.1)' };
+  return { label: 'KALLIS', color: '#ff4444', bg: 'rgba(255,68,68,0.1)' };
+}
+
+async function fetchPrices(start, end) {
+  const url = `${API_BASE}?start=${encodeURIComponent(start+'T00:00:00.000Z')}&end=${encodeURIComponent(end+'T23:59:59.000Z')}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('API viga: ' + res.status);
+  const json = await res.json();
+  return (json.data || []).map(d => ({
+    ts: d.timestamp * 1000,
+    price: d.price?.ee ?? 0
+  }));
+}
+
+async function loadData() {
+  const today = new Date();
+  const past = new Date(today);
+  past.setDate(past.getDate() - 6);
+  const future = new Date(today);
+  future.setDate(future.getDate() + 1);
+
+  const data = await fetchPrices(formatDate(past), formatDate(future));
+  return data;
+}
+
+function filterByDay(data, dateStr) {
+  return data.filter(d => {
+    const dt = new Date(d.ts);
+    return formatDate(dt) === dateStr;
+  });
+}
+
+function renderApp(data) {
+  const now = new Date();
+  const todayStr = formatDate(now);
+  const tomorrowStr = formatDate(new Date(now.getTime() + 86400000));
+
+  const todayData = filterByDay(data, todayStr);
+  const tomorrowData = filterByDay(data, tomorrowStr);
+
+  // Current hour price
+  const currentHour = now.getHours();
+  const currentEntry = todayData.find(d => new Date(d.ts).getHours() === currentHour);
+  const currentRaw = currentEntry ? currentEntry.price : null;
+  const currentSenti = currentRaw !== null ? parseFloat(euroPerMWh_to_senti(currentRaw)) : null;
+
+  // Stats for today
+  const todayPrices = todayData.map(d => parseFloat(euroPerMWh_to_senti(d.price)));
+  const minP = todayPrices.length ? Math.min(...todayPrices) : 0;
+  const maxP = todayPrices.length ? Math.max(...todayPrices) : 0;
+  const avgP = todayPrices.length ? (todayPrices.reduce((a,b)=>a+b,0)/todayPrices.length) : 0;
+
+  const level = currentSenti !== null ? getLevel(currentSenti) : { label: '–', color: '#4a6080', bg: 'transparent' };
+
+  const hasTomorrow = tomorrowData.length > 0;
+
+  document.getElementById('statusText').textContent = 'REAALAEG · ' + now.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
+
+  const app = document.getElementById('appContent');
+  app.innerHTML = `
+    <div class="hero">
+      <div>
+        <div class="current-label">Praegune hind (${pad(currentHour)}:00–${pad(currentHour+1)}:00)</div>
+        <div class="current-price" id="heroPriceVal" style="color:${level.color}">
+          ${currentSenti !== null ? currentSenti : '–'}
+          <span class="current-unit">s/kWh</span>
+        </div>
+        <div class="current-time">${now.toLocaleDateString('et-EE', {weekday:'long', day:'numeric', month:'long'})}</div>
+      </div>
+      <div class="price-tag">
+        <div class="price-level" style="color:${level.color}; border-color:${level.color}; background:${level.bg}">${level.label}</div>
+        <div class="change" style="color:${level.color}">${currentRaw !== null ? currentRaw.toFixed(2) + ' €/MWh' : ''}</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Täna min</div>
+        <div class="stat-value" style="color:var(--cheap)">${minP.toFixed(2)}</div>
+        <div class="stat-sub">s/kWh</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Täna kesk.</div>
+        <div class="stat-value" style="color:var(--mid)">${avgP.toFixed(2)}</div>
+        <div class="stat-sub">s/kWh</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Täna max</div>
+        <div class="stat-value" style="color:var(--expensive)">${maxP.toFixed(2)}</div>
+        <div class="stat-sub">s/kWh</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Homme</div>
+        <div class="stat-value" style="color:${hasTomorrow ? 'var(--accent3)' : 'var(--muted)'}">${hasTomorrow ? filterByDay(data, tomorrowStr).map(d=>parseFloat(euroPerMWh_to_senti(d.price))).reduce((a,b)=>a+b,0)/tomorrowData.length|0 : '–'}</div>
+        <div class="stat-sub">${hasTomorrow ? 's/kWh kesk.' : 'pole veel'}</div>
+      </div>
+    </div>
+
+    <div class="chart-section">
+      <div class="section-header">
+        <div class="section-title">Hinnakõver</div>
+        <div class="tabs">
+          <button class="tab ${!hasTomorrow || currentTab==='today' ? 'active' : ''}" onclick="switchTab('today', ${JSON.stringify(todayStr)})">Täna</button>
+          <button class="tab ${hasTomorrow && currentTab==='tomorrow' ? 'active' : ''}" onclick="switchTab('tomorrow', ${JSON.stringify(tomorrowStr)})" ${hasTomorrow ? '' : 'disabled style="opacity:0.3;cursor:not-allowed"'}>Homme</button>
+          <button class="tab ${currentTab==='week' ? 'active' : ''}" onclick="switchTab('week', null)">7 päeva</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+
+    <div class="hours-section">
+      <div class="section-header">
+        <div class="section-title">Tunnid – <span id="hoursTitle">Täna</span></div>
+      </div>
+      <div class="hours-grid" id="hoursGrid"></div>
+    </div>
+
+    <p class="info-note">Hinnad sisaldavad 24% käibemaksu · Võrguteenus, taastuvenergia tasu ja aktsiis lisanduvad · Andmed uuendatakse iga tund</p>
+  `;
+
+  window._allData = data;
+  window._todayStr = todayStr;
+  window._tomorrowStr = tomorrowStr;
+  window._currentHour = currentHour;
+
+  drawChart(todayData, 'Täna');
+  drawHours(todayData, currentHour, true);
+}
+
+function switchTab(tab, dateStr) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (tab === 'week') {
+    drawChart(window._allData, '7 päeva');
+    document.getElementById('hoursTitle').textContent = '7 päeva';
+    drawHours(window._allData, -1, false);
+  } else if (tab === 'tomorrow') {
+    const d = filterByDay(window._allData, window._tomorrowStr);
+    drawChart(d, 'Homme');
+    document.getElementById('hoursTitle').textContent = 'Homme';
+    drawHours(d, -1, false);
+  } else {
+    const d = filterByDay(window._allData, window._todayStr);
+    drawChart(d, 'Täna');
+    document.getElementById('hoursTitle').textContent = 'Täna';
+    drawHours(d, window._currentHour, true);
+  }
+}
+
+function drawChart(data, label) {
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  const labels = data.map(d => {
+    const dt = new Date(d.ts);
+    if (label === '7 päeva') {
+      return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}h`;
+    }
+    return pad(dt.getHours()) + ':00';
+  });
+
+  const prices = data.map(d => parseFloat(euroPerMWh_to_senti(d.price)));
+  const colors = prices.map(p => getColor(p));
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+  gradient.addColorStop(0, 'rgba(0,229,160,0.3)');
+  gradient.addColorStop(1, 'rgba(0,229,160,0)');
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Hind (s/kWh)',
+        data: prices,
+        backgroundColor: colors.map(c => c + '99'),
+        borderColor: colors,
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111720',
+          borderColor: '#1e2a38',
+          borderWidth: 1,
+          titleFont: { family: 'Space Mono', size: 11 },
+          bodyFont: { family: 'Space Mono', size: 13 },
+          callbacks: {
+            label: ctx => ` ${ctx.raw} s/kWh`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#4a6080',
+            font: { family: 'Space Mono', size: 9 },
+            maxRotation: 45,
+            maxTicksLimit: label === '7 päeva' ? 14 : 24
+          },
+          grid: { color: 'rgba(255,255,255,0.03)' }
+        },
+        y: {
+          ticks: {
+            color: '#4a6080',
+            font: { family: 'Space Mono', size: 10 },
+            callback: v => v + ' s'
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+
+function drawHours(data, currentHour, highlightCurrent) {
+  const grid = document.getElementById('hoursGrid');
+  if (!grid) return;
+
+  if (data.length > 48) {
+    // For week view, show daily averages instead
+    const byDay = {};
+    data.forEach(d => {
+      const dt = new Date(d.ts);
+      const key = formatDate(dt);
+      if (!byDay[key]) byDay[key] = [];
+      byDay[key].push(parseFloat(euroPerMWh_to_senti(d.price)));
+    });
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
+    grid.innerHTML = Object.entries(byDay).map(([day, prices]) => {
+      const avg = (prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(2);
+      const col = getColor(parseFloat(avg));
+      const bg = col + '22';
+      const [y,m,d2] = day.split('-');
+      const dt = new Date(day);
+      const weekday = dt.toLocaleDateString('et-EE', {weekday:'short'});
+      return `<div class="hour-cell" style="background:${bg}">
+        <div class="hour-num">${weekday} ${d2}.${m}</div>
+        <div class="hour-price" style="color:${col}">${avg}</div>
+        <div class="hour-num">s/kWh</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  grid.style.gridTemplateColumns = '';
+  grid.innerHTML = data.map(d => {
+    const dt = new Date(d.ts);
+    const h = dt.getHours();
+    const p = parseFloat(euroPerMWh_to_senti(d.price));
+    const col = getColor(p);
+    const bg = col + '22';
+    const isCurrent = highlightCurrent && h === currentHour;
+    return `<div class="hour-cell ${isCurrent ? 'current-hour' : ''}" style="background:${bg}">
+      <div class="hour-num">${pad(h)}h</div>
+      <div class="hour-price" style="color:${col}">${p}</div>
+    </div>`;
+  }).join('');
+}
+
+async function init() {
+  try {
+    const data = await loadData();
+    if (!data.length) throw new Error('Andmed puuduvad');
+    allData = data;
+    renderApp(data);
+  } catch (err) {
+    document.getElementById('statusText').textContent = 'VIGA';
+    document.getElementById('appContent').innerHTML = `
+      <div class="error-msg">
+        ⚠️ Andmete laadimine ebaõnnestus<br><br>
+        ${err.message}<br><br>
+        Elering API võib olla ajutiselt kättesaamatu.<br>
+        Proovi lehte uuendada.
+      </div>
+    `;
+  }
+}
+
+init();
+// Refresh every 5 min
+setInterval(init, 5 * 60 * 1000);
+</script>
+</body>
+</html>
