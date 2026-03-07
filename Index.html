@@ -430,6 +430,8 @@
     font-size: 14px;
     margin-top: 4px;
   }
+
+  footer {
     text-align: center;
     padding: 32px 0 16px;
     font-family: 'Space Mono', monospace;
@@ -841,6 +843,7 @@ function drawNextHours(data, currentHour) {
 }
 
 
+async function init() {
   try {
     const data = await loadData();
     if (!data.length) throw new Error('Andmed puuduvad');
