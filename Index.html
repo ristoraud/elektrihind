@@ -470,7 +470,7 @@
   </div>
 
   <footer>
-    Andmed: <a href="https://dashboard.elering.ee" target="_blank">Elering NPS API</a> &nbsp;·&nbsp; Hinnad €/MWh (sisaldab käibemaksu 24%, ilma võrguteenuseta) &nbsp;·&nbsp; Nord Pool EE piirkond
+    <a href="https://dashboard.elering.ee" target="_blank">Elering NPS API</a> &nbsp;·&nbsp; Nord Pool EE &nbsp;·&nbsp; KM 24%
   </footer>
 </div>
 
@@ -522,7 +522,7 @@ async function loadData() {
   const past = new Date(today);
   past.setDate(past.getDate() - 6);
   const future = new Date(today);
-  future.setDate(future.getDate() + 1);
+  future.setDate(future.getDate() + 2); // +2 to capture full tomorrow in EET (UTC+2)
 
   const data = await fetchPrices(formatDate(past), formatDate(future));
   return data;
@@ -622,7 +622,7 @@ function renderApp(data) {
       <div class="next-hours" id="nextHoursGrid"></div>
     </div>
 
-    <p class="info-note">Hinnad sisaldavad 24% käibemaksu · Võrguteenus, taastuvenergia tasu ja aktsiis lisanduvad · Andmed uuendatakse iga tund</p>
+    <p class="info-note">KM 24% · Võrguteenus ja aktsiis lisanduvad · Allikas: Elering / Nord Pool EE</p>
   `;
 
   window._allData = data;
