@@ -374,7 +374,62 @@
     line-height: 1.6;
   }
 
-  footer {
+  .next-hours {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+
+  .next-hour-card {
+    flex: 1;
+    min-width: 80px;
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+    border: 1px solid transparent;
+    position: relative;
+  }
+
+  .next-hour-card.next-current {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(0,229,160,0.2);
+  }
+
+  .next-hour-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .next-hour-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .next-hour-price {
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .next-hour-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .trend-arrow {
+    font-size: 14px;
+    margin-top: 4px;
+  }
     text-align: center;
     padding: 32px 0 16px;
     font-family: 'Space Mono', monospace;
@@ -548,9 +603,9 @@ function renderApp(data) {
       <div class="section-header">
         <div class="section-title">Hinnakõver</div>
         <div class="tabs">
-          <button class="tab ${!hasTomorrow || currentTab==='today' ? 'active' : ''}" onclick="switchTab('today', ${JSON.stringify(todayStr)})">Täna</button>
-          <button class="tab ${hasTomorrow && currentTab==='tomorrow' ? 'active' : ''}" onclick="switchTab('tomorrow', ${JSON.stringify(tomorrowStr)})" ${hasTomorrow ? '' : 'disabled style="opacity:0.3;cursor:not-allowed"'}>Homme</button>
-          <button class="tab ${currentTab==='week' ? 'active' : ''}" onclick="switchTab('week', null)">7 päeva</button>
+          <button class="tab ${!hasTomorrow || currentTab==='today' ? 'active' : ''}" onclick="switchTab('today', this)">Täna</button>
+          <button class="tab ${hasTomorrow && currentTab==='tomorrow' ? 'active' : ''}" onclick="switchTab('tomorrow', this)" ${hasTomorrow ? '' : 'disabled style="opacity:0.3;cursor:not-allowed"'}>Homme</button>
+          <button class="tab ${currentTab==='week' ? 'active' : ''}" onclick="switchTab('week', this)">7 päeva</button>
         </div>
       </div>
       <div class="chart-wrap">
@@ -565,6 +620,13 @@ function renderApp(data) {
       <div class="hours-grid" id="hoursGrid"></div>
     </div>
 
+    <div class="hours-section" id="nextHoursSection">
+      <div class="section-header">
+        <div class="section-title">Järgmised 5 tundi</div>
+      </div>
+      <div class="next-hours" id="nextHoursGrid"></div>
+    </div>
+
     <p class="info-note">Hinnad sisaldavad 24% käibemaksu · Võrguteenus, taastuvenergia tasu ja aktsiis lisanduvad · Andmed uuendatakse iga tund</p>
   `;
 
@@ -575,12 +637,13 @@ function renderApp(data) {
 
   drawChart(todayData, 'Täna');
   drawHours(todayData, currentHour, true);
+  drawNextHours(todayData, currentHour);
 }
 
-function switchTab(tab, dateStr) {
+function switchTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
+  btn.classList.add('active');
 
   if (tab === 'week') {
     drawChart(window._allData, '7 päeva');
@@ -603,6 +666,9 @@ function drawChart(data, label) {
   const ctx = document.getElementById('priceChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
 
+  const now = new Date();
+  const currentHour = now.getHours();
+
   const labels = data.map(d => {
     const dt = new Date(d.ts);
     if (label === '7 päeva') {
@@ -614,12 +680,38 @@ function drawChart(data, label) {
   const prices = data.map(d => parseFloat(euroPerMWh_to_senti(d.price)));
   const colors = prices.map(p => getColor(p));
 
+  // Find current hour index for annotation
+  let currentIndex = -1;
+  if (label !== '7 päeva') {
+    currentIndex = data.findIndex(d => new Date(d.ts).getHours() === currentHour);
+  }
+
+  // Custom plugin for vertical line
+  const currentLinePlugin = {
+    id: 'currentLine',
+    afterDatasetsDraw(chart) {
+      if (currentIndex < 0) return;
+      const { ctx, scales: { x, y } } = chart;
+      const xPos = x.getPixelForValue(currentIndex);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(xPos, y.top);
+      ctx.lineTo(xPos, y.bottom);
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
   const gradient = ctx.createLinearGradient(0, 0, 0, 200);
   gradient.addColorStop(0, 'rgba(0,229,160,0.3)');
   gradient.addColorStop(1, 'rgba(0,229,160,0)');
 
   chartInstance = new Chart(ctx, {
     type: 'bar',
+    plugins: [currentLinePlugin],
     data: {
       labels,
       datasets: [{
@@ -716,7 +808,39 @@ function drawHours(data, currentHour, highlightCurrent) {
   }).join('');
 }
 
-async function init() {
+function drawNextHours(data, currentHour) {
+  const section = document.getElementById('nextHoursSection');
+  const grid = document.getElementById('nextHoursGrid');
+  if (!grid) return;
+
+  // Get current + next 4 hours (5 total)
+  const upcoming = [];
+  for (let i = 0; i < 5; i++) {
+    const h = (currentHour + i) % 24;
+    const entry = data.find(d => new Date(d.ts).getHours() === h);
+    if (entry) upcoming.push({ hour: h, price: parseFloat(euroPerMWh_to_senti(entry.price)), isCurrent: i === 0 });
+  }
+
+  if (!upcoming.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  grid.innerHTML = upcoming.map((u, i) => {
+    const col = getColor(u.price);
+    const bg = col + '22';
+    const nextPrice = upcoming[i + 1]?.price;
+    const trend = nextPrice === undefined ? '' : nextPrice > u.price ? '↑' : nextPrice < u.price ? '↓' : '→';
+    const trendColor = nextPrice === undefined ? '' : nextPrice > u.price ? '#ff6b6b' : nextPrice < u.price ? '#00e5a0' : '#4a6080';
+    return `<div class="next-hour-card ${u.isCurrent ? 'next-current' : ''}" style="background:${bg}">
+      ${u.isCurrent ? '<div class="next-hour-label">PRAEGU</div>' : '<div class="next-hour-label">&nbsp;</div>'}
+      <div class="next-hour-time">${pad(u.hour)}:00</div>
+      <div class="next-hour-price" style="color:${col}">${u.price}</div>
+      <div class="next-hour-unit">s/kWh</div>
+      ${trend ? `<div class="trend-arrow" style="color:${trendColor}">${trend}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+
   try {
     const data = await loadData();
     if (!data.length) throw new Error('Andmed puuduvad');
