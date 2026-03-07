@@ -453,9 +453,10 @@ async function fetchPrices(start, end) {
   const res = await fetch(url);
   if (!res.ok) throw new Error('API viga: ' + res.status);
   const json = await res.json();
-  return (json.data || []).map(d => ({
+  const entries = json.data?.ee || json.data || [];
+  return entries.map(d => ({
     ts: d.timestamp * 1000,
-    price: d.price?.ee ?? 0
+    price: d.price ?? 0
   }));
 }
 
