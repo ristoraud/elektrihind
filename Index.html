@@ -606,7 +606,7 @@ function renderApp(data) {
         <div class="section-title">Hinnakõver</div>
         <div class="tabs">
           <button class="tab ${!hasTomorrow || currentTab==='today' ? 'active' : ''}" onclick="switchTab('today', this)">Täna</button>
-          <button class="tab ${hasTomorrow && currentTab==='tomorrow' ? 'active' : ''}" onclick="switchTab('tomorrow', this)" ${hasTomorrow ? '' : 'disabled style="opacity:0.3;cursor:not-allowed"'}>Homme</button>
+          <button class="tab ${currentTab==='tomorrow' ? 'active' : ''}" onclick="switchTab('tomorrow', this)">Homme</button>
           <button class="tab ${currentTab==='week' ? 'active' : ''}" onclick="switchTab('week', this)">7 päeva</button>
         </div>
       </div>
@@ -642,18 +642,33 @@ function switchTab(tab, btn) {
 
   if (tab === 'week') {
     drawChart(window._allData, '7 päeva');
-    document.getElementById('hoursTitle').textContent = '7 päeva';
-    drawHours(window._allData, -1, false);
   } else if (tab === 'tomorrow') {
     const d = filterByDay(window._allData, window._tomorrowStr);
+    if (d.length === 0) {
+      if (chartInstance) chartInstance.destroy();
+      const now = new Date();
+      const nextUpdate = new Date();
+      nextUpdate.setHours(13, 0, 0, 0);
+      if (now >= nextUpdate) nextUpdate.setDate(nextUpdate.getDate() + 1);
+      const hoursLeft = Math.round((nextUpdate - now) / 3600000);
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.save();
+      ctx.fillStyle = '#4a6080';
+      ctx.font = "14px 'Space Mono', monospace";
+      ctx.textAlign = 'center';
+      ctx.fillText('Homme hinnad pole veel saadaval', ctx.canvas.width / 2, 80);
+      ctx.fillStyle = '#2a4060';
+      ctx.font = "12px 'Space Mono', monospace";
+      ctx.fillText(`Nord Pool avaldab ~kell 13:00 (${hoursLeft}h pärast)`, ctx.canvas.width / 2, 110);
+      ctx.restore();
+      chartInstance = null;
+      return;
+    }
     drawChart(d, 'Homme');
-    document.getElementById('hoursTitle').textContent = 'Homme';
-    drawHours(d, -1, false);
   } else {
     const d = filterByDay(window._allData, window._todayStr);
     drawChart(d, 'Täna');
-    document.getElementById('hoursTitle').textContent = 'Täna';
-    drawHours(d, window._currentHour, true);
   }
 }
 
@@ -675,9 +690,17 @@ function drawChart(data, label) {
   const prices = data.map(d => parseFloat(euroPerMWh_to_senti(d.price)));
   const colors = prices.map(p => getColor(p));
 
-  // Find current hour index for annotation
+  // Find current position index for annotation
   let currentIndex = -1;
-  if (label !== '7 päeva') {
+  if (label === '7 päeva') {
+    const nowTs = Date.now();
+    // Find the bar closest to current time
+    let minDiff = Infinity;
+    data.forEach((d, i) => {
+      const diff = Math.abs(d.ts - nowTs);
+      if (diff < minDiff) { minDiff = diff; currentIndex = i; }
+    });
+  } else {
     currentIndex = data.findIndex(d => new Date(d.ts).getHours() === currentHour);
   }
 
