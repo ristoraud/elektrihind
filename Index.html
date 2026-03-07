@@ -557,7 +557,7 @@ function renderApp(data) {
 
   const level = currentSenti !== null ? getLevel(currentSenti) : { label: '–', color: '#4a6080', bg: 'transparent' };
 
-  const hasTomorrow = tomorrowData.length > 0 && tomorrowData.some(d => d.price > 0);
+  const hasTomorrow = tomorrowData.length >= 20 && tomorrowData.some(d => d.price > 0);
 
   document.getElementById('statusText').textContent = 'REAALAEG · ' + now.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
 
@@ -644,7 +644,7 @@ function switchTab(tab, btn) {
     drawChart(window._allData, '7 päeva');
   } else if (tab === 'tomorrow') {
     const d = filterByDay(window._allData, window._tomorrowStr);
-    const hasRealData = d.length > 0 && d.some(x => x.price > 0);
+    const hasRealData = d.length >= 20 && d.some(x => x.price > 0);
     if (!hasRealData) {
       if (chartInstance) chartInstance.destroy();
       const now = new Date();
