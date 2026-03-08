@@ -623,7 +623,7 @@ function renderApp(data) {
 
   drawChart(todayData, 'Täna');
   drawHours(todayData, currentHour, true);
-  drawNextHours(todayData, currentHour);
+  drawNextHours([...todayData, ...tomorrowData], currentHour);
 }
 
 function switchTab(tab, btn) {
