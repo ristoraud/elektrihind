@@ -823,12 +823,21 @@ function drawNextHours(data, currentHour) {
   const grid = document.getElementById('nextHoursGrid');
   if (!grid) return;
 
-  // Get current + next 4 hours (5 total)
+  // Get current + next 4 hours (5 total) — timestamp-based to handle midnight crossover
   const upcoming = [];
+  const nowTs = Date.now();
+  const currentHourStart = new Date(nowTs);
+  currentHourStart.setMinutes(0, 0, 0);
   for (let i = 0; i < 5; i++) {
-    const h = (currentHour + i) % 24;
-    const entry = data.find(d => new Date(d.ts).getHours() === h);
-    if (entry) upcoming.push({ hour: h, price: parseFloat(euroPerMWh_to_senti(entry.price)), isCurrent: i === 0 });
+    const slotTs = currentHourStart.getTime() + i * 3600000;
+    const slotHour = new Date(slotTs).toLocaleString('sv-SE', { timeZone: 'Europe/Tallinn', hour: '2-digit', hour12: false }).slice(0, 2);
+    const slotDate = new Date(slotTs).toLocaleDateString('sv-SE', { timeZone: 'Europe/Tallinn' });
+    const entry = data.find(d => {
+      const dDate = new Date(d.ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Tallinn' });
+      const dHour = new Date(d.ts).toLocaleString('sv-SE', { timeZone: 'Europe/Tallinn', hour: '2-digit', hour12: false }).slice(0, 2);
+      return dDate === slotDate && dHour === slotHour;
+    });
+    if (entry) upcoming.push({ hour: parseInt(slotHour), price: parseFloat(euroPerMWh_to_senti(entry.price)), isCurrent: i === 0 });
   }
 
   if (!upcoming.length) { section.style.display = 'none'; return; }
