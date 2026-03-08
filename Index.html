@@ -490,9 +490,14 @@ function formatDate(d) {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
+function formatDateEET(ts) {
+  // Format timestamp as YYYY-MM-DD in EET (Europe/Tallinn)
+  return new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Tallinn' });
+}
+
 function euroPerMWh_to_senti(v) {
   // EUR/MWh → senti/kWh (×0.1), with 22% VAT
-  return (v * 0.1 * 1.24).toFixed(2);
+  return (v * 0.1 * 1.24).toFixed(1);
 }
 
 function getColor(price) {
@@ -508,8 +513,8 @@ function getLevel(price) {
 }
 
 async function fetchPrices(start, end) {
-  // Use EET offset (UTC+2) so full local days are fetched
-  const url = `${API_BASE}?start=${encodeURIComponent(start+'T00:00:00.000Z')}&end=${encodeURIComponent(end+'T21:59:59.000Z')}`;
+  // Fetch with 2h buffer on both sides to cover EET (UTC+2)
+  const url = `${API_BASE}?start=${encodeURIComponent(start+'T00:00:00.000Z')}&end=${encodeURIComponent(end+'T23:59:59.000Z')}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('API viga: ' + res.status);
   const json = await res.json();
@@ -532,16 +537,13 @@ async function loadData() {
 }
 
 function filterByDay(data, dateStr) {
-  return data.filter(d => {
-    const dt = new Date(d.ts);
-    return formatDate(dt) === dateStr;
-  });
+  return data.filter(d => formatDateEET(d.ts) === dateStr);
 }
 
 function renderApp(data) {
   const now = new Date();
-  const todayStr = formatDate(now);
-  const tomorrowStr = formatDate(new Date(now.getTime() + 86400000));
+  const todayStr = formatDateEET(now.getTime());
+  const tomorrowStr = formatDateEET(now.getTime() + 86400000);
 
   const todayData = filterByDay(data, todayStr);
   const tomorrowData = filterByDay(data, tomorrowStr);
@@ -581,13 +583,7 @@ function renderApp(data) {
       </div>
     </div>
 
-    <div class="stats">
-      <div class="stat-card">
-        <div class="stat-label">Homme kesk.</div>
-        <div class="stat-value" style="color:${hasTomorrow ? 'var(--accent3)' : 'var(--muted)'}">${hasTomorrow ? (filterByDay(data, tomorrowStr).map(d=>parseFloat(euroPerMWh_to_senti(d.price))).reduce((a,b)=>a+b,0)/tomorrowData.length).toFixed(2) : '–'}</div>
-        <div class="stat-sub">${hasTomorrow ? 's/kWh' : 'pole veel'}</div>
-      </div>
-    </div>
+
 
     <div class="chart-section">
       <div class="section-header">
