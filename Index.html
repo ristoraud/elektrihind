@@ -586,7 +586,7 @@ function renderApp(data) {
       </div>
       <div class="price-tag">
         <div class="price-level" style="color:${level.color}; border-color:${level.color}; background:${level.bg}">${level.label}</div>
-        <div class="change" style="color:${level.color}">${currentRaw !== null ? currentRaw.toFixed(2) + ' €/MWh' : ''}</div>
+        <div class="change" style="color:${level.color}">${currentSenti !== null ? '100km = ' + (currentSenti * 16.7 / 100).toFixed(2) + ' €' : ''}</div>
       </div>
     </div>
 
