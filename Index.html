@@ -382,59 +382,55 @@
 
   .next-hours {
     display: flex;
-    gap: 10px;
-    margin-top: 20px;
-    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: nowrap;
   }
 
   .next-hour-card {
     flex: 1;
-    min-width: 80px;
-    border-radius: 14px;
-    padding: 14px 10px;
+    min-width: 0;
+    border-radius: 12px;
+    padding: 12px 6px;
     text-align: center;
     border: 1px solid transparent;
-    position: relative;
   }
 
   .next-hour-card.next-current {
     border-color: var(--accent);
-    box-shadow: 0 0 16px rgba(0,229,160,0.2);
+    box-shadow: 0 0 12px rgba(0,229,160,0.2);
   }
 
   .next-hour-label {
     font-family: 'Space Mono', monospace;
-    font-size: 9px;
+    font-size: 8px;
     color: var(--muted);
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   .next-hour-time {
     font-family: 'Space Mono', monospace;
-    font-size: 11px;
+    font-size: 10px;
     color: var(--muted);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   .next-hour-price {
-    font-size: 20px;
+    font-size: clamp(14px, 3.5vw, 20px);
     font-weight: 800;
-    letter-spacing: -1px;
+    letter-spacing: -0.5px;
     font-family: 'Syne', sans-serif;
   }
 
   .next-hour-unit {
     font-family: 'Space Mono', monospace;
-    font-size: 9px;
+    font-size: 8px;
     color: var(--muted);
     margin-top: 2px;
-  }
-
-  .trend-arrow {
-    font-size: 14px;
-    margin-top: 4px;
   }
 
   footer {
@@ -512,7 +508,8 @@ function getLevel(price) {
 }
 
 async function fetchPrices(start, end) {
-  const url = `${API_BASE}?start=${encodeURIComponent(start+'T00:00:00.000Z')}&end=${encodeURIComponent(end+'T23:59:59.000Z')}`;
+  // Use EET offset (UTC+2) so full local days are fetched
+  const url = `${API_BASE}?start=${encodeURIComponent(start+'T00:00:00.000Z')}&end=${encodeURIComponent(end+'T21:59:59.000Z')}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error('API viga: ' + res.status);
   const json = await res.json();
@@ -586,24 +583,9 @@ function renderApp(data) {
 
     <div class="stats">
       <div class="stat-card">
-        <div class="stat-label">Täna min</div>
-        <div class="stat-value" style="color:var(--cheap)">${minP.toFixed(2)}</div>
-        <div class="stat-sub">s/kWh</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Täna kesk.</div>
-        <div class="stat-value" style="color:var(--mid)">${avgP.toFixed(2)}</div>
-        <div class="stat-sub">s/kWh</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Täna max</div>
-        <div class="stat-value" style="color:var(--expensive)">${maxP.toFixed(2)}</div>
-        <div class="stat-sub">s/kWh</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Homme</div>
-        <div class="stat-value" style="color:${hasTomorrow ? 'var(--accent3)' : 'var(--muted)'}">${hasTomorrow ? filterByDay(data, tomorrowStr).map(d=>parseFloat(euroPerMWh_to_senti(d.price))).reduce((a,b)=>a+b,0)/tomorrowData.length|0 : '–'}</div>
-        <div class="stat-sub">${hasTomorrow ? 's/kWh kesk.' : 'pole veel'}</div>
+        <div class="stat-label">Homme kesk.</div>
+        <div class="stat-value" style="color:${hasTomorrow ? 'var(--accent3)' : 'var(--muted)'}">${hasTomorrow ? (filterByDay(data, tomorrowStr).map(d=>parseFloat(euroPerMWh_to_senti(d.price))).reduce((a,b)=>a+b,0)/tomorrowData.length).toFixed(2) : '–'}</div>
+        <div class="stat-sub">${hasTomorrow ? 's/kWh' : 'pole veel'}</div>
       </div>
     </div>
 
@@ -853,15 +835,11 @@ function drawNextHours(data, currentHour) {
   grid.innerHTML = upcoming.map((u, i) => {
     const col = getColor(u.price);
     const bg = col + '22';
-    const nextPrice = upcoming[i + 1]?.price;
-    const trend = nextPrice === undefined ? '' : nextPrice > u.price ? '↑' : nextPrice < u.price ? '↓' : '→';
-    const trendColor = nextPrice === undefined ? '' : nextPrice > u.price ? '#ff6b6b' : nextPrice < u.price ? '#00e5a0' : '#4a6080';
     return `<div class="next-hour-card ${u.isCurrent ? 'next-current' : ''}" style="background:${bg}">
       ${u.isCurrent ? '<div class="next-hour-label">PRAEGU</div>' : '<div class="next-hour-label">&nbsp;</div>'}
       <div class="next-hour-time">${pad(u.hour)}:00</div>
       <div class="next-hour-price" style="color:${col}">${u.price}</div>
       <div class="next-hour-unit">s/kWh</div>
-      ${trend ? `<div class="trend-arrow" style="color:${trendColor}">${trend}</div>` : ''}
     </div>`;
   }).join('');
 }
