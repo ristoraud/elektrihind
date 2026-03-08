@@ -530,9 +530,26 @@ async function loadData() {
   const past = new Date(today);
   past.setDate(past.getDate() - 6);
   const future = new Date(today);
-  future.setDate(future.getDate() + 2); // +2 to capture full tomorrow in EET (UTC+2)
+  future.setDate(future.getDate() + 2);
 
   const data = await fetchPrices(formatDate(past), formatDate(future));
+
+  // DEBUG
+  const todayStr = formatDateEET(today.getTime());
+  const tomorrowStr = formatDateEET(today.getTime() + 86400000);
+  const todayData = data.filter(d => formatDateEET(d.ts) === todayStr);
+  const tomorrowData = data.filter(d => formatDateEET(d.ts) === tomorrowStr);
+  console.log('Total entries:', data.length);
+  console.log('TodayStr:', todayStr, '-> entries:', todayData.length);
+  console.log('TomorrowStr:', tomorrowStr, '-> entries:', tomorrowData.length, 'nonzero:', tomorrowData.filter(d=>d.price>0).length);
+  if (tomorrowData.length > 0) {
+    console.log('First tomorrow:', new Date(tomorrowData[0].ts).toISOString(), tomorrowData[0].price);
+    console.log('Last tomorrow:', new Date(tomorrowData[tomorrowData.length-1].ts).toISOString(), tomorrowData[tomorrowData.length-1].price);
+  }
+  // Show unique dates in data
+  const dates = [...new Set(data.map(d => formatDateEET(d.ts)))].sort();
+  console.log('All dates in data:', dates);
+
   return data;
 }
 
