@@ -474,6 +474,7 @@
   <footer>
     <a href="https://dashboard.elering.ee" target="_blank">Elering NPS API</a> &nbsp;·&nbsp; Nord Pool EE &nbsp;·&nbsp; KM 24%
   </footer>
+  <div id="debugInfo" style="background:#1a2030;color:#00e5a0;font-family:monospace;font-size:11px;padding:16px;margin:8px;border-radius:8px;line-height:1.8;"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
@@ -534,21 +535,22 @@ async function loadData() {
 
   const data = await fetchPrices(formatDate(past), formatDate(future));
 
-  // DEBUG
+  // DEBUG - show on page
   const todayStr = formatDateEET(today.getTime());
   const tomorrowStr = formatDateEET(today.getTime() + 86400000);
   const todayData = data.filter(d => formatDateEET(d.ts) === todayStr);
   const tomorrowData = data.filter(d => formatDateEET(d.ts) === tomorrowStr);
-  console.log('Total entries:', data.length);
-  console.log('TodayStr:', todayStr, '-> entries:', todayData.length);
-  console.log('TomorrowStr:', tomorrowStr, '-> entries:', tomorrowData.length, 'nonzero:', tomorrowData.filter(d=>d.price>0).length);
-  if (tomorrowData.length > 0) {
-    console.log('First tomorrow:', new Date(tomorrowData[0].ts).toISOString(), tomorrowData[0].price);
-    console.log('Last tomorrow:', new Date(tomorrowData[tomorrowData.length-1].ts).toISOString(), tomorrowData[tomorrowData.length-1].price);
-  }
-  // Show unique dates in data
   const dates = [...new Set(data.map(d => formatDateEET(d.ts)))].sort();
-  console.log('All dates in data:', dates);
+  const debugEl = document.getElementById('debugInfo');
+  if (debugEl) {
+    debugEl.innerHTML = `
+      <b>Kokku:</b> ${data.length} kirjet<br>
+      <b>Täna (${todayStr}):</b> ${todayData.length} tundi<br>
+      <b>Homme (${tomorrowStr}):</b> ${tomorrowData.length} tundi, nullist suuremad: ${tomorrowData.filter(d=>d.price>0).length}<br>
+      <b>Kõik kuupäevad:</b> ${dates.join(', ')}<br>
+      ${tomorrowData.length > 0 ? `<b>Esimene homme:</b> ${new Date(tomorrowData[0].ts).toISOString()} = ${tomorrowData[0].price}` : ''}
+    `;
+  }
 
   return data;
 }
