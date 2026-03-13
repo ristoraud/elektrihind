@@ -467,13 +467,13 @@
 
   .next-hour-time {
     font-family: 'Space Mono', monospace;
-    font-size: 10px;
+    font-size: 8px;
     color: var(--muted);
-    margin-bottom: 6px;
+    margin-bottom: 3px;
   }
 
   .next-hour-price {
-    font-size: clamp(14px, 3.5vw, 20px);
+    font-size: clamp(11px, 2.5vw, 17px);
     font-weight: 800;
     letter-spacing: -0.5px;
     font-family: 'Syne', sans-serif;
@@ -481,7 +481,7 @@
 
   .next-hour-unit {
     font-family: 'Space Mono', monospace;
-    font-size: 8px;
+    font-size: 7px;
     color: var(--muted);
     margin-top: 2px;
   }
@@ -604,15 +604,18 @@ function getColor(price) {
   return getComputedStyle(document.documentElement).getPropertyValue('--expensive').trim();
 }
 
-// Fikseeritud pakett 8.629 s/kWh (KM-ta) × 1.24 = 10.700 s/kWh (KM-ga)
-// Päev lävi: 10.700 + võrgutasu päev(4.58) + taastuvenergia(1.0416) + varustuskindlus(0.9399) + tasakaalustamine(0.4625) + aktsiis(0.2604) = 18.004
-// Öö lävi:   10.700 + võrgutasu öö(2.60)  + taastuvenergia(1.0416) + varustuskindlus(0.9399) + tasakaalustamine(0.4625) + aktsiis(0.2604) = 16.004
-const THRESH_FULL_REF_DAY   = 18.004;
-const THRESH_FULL_REF_NIGHT = 16.004;
+// Fixed package reference: 8.629 s/kWh (incl KM)
+// Fees without marginaal (incl KM): taastuvenergia+varustuskindlus+tasakaalustamine+aktsiis = 2.704
+// + võrgutasu päev 4.58 → kogukulu_lo = 8.629+4.58+2.704 = 15.913
 const THRESH_SPOT_LO  = 7;
 const THRESH_SPOT_HI  = 17;
+// Kogukulu: odav < 15, keskmine 15–25, kallis ≥ 25
 const THRESH_FULL_LO  = 15;
 const THRESH_FULL_HI  = 25;
+
+// Fikseeritud paketi kogukulu referentsjoon graafikus (10.700 + kõik tasud v.a. marginaal)
+const FIXED_PKG_DAY   = 10.700 + FEES.vorgutasu_paev + FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis;
+const FIXED_PKG_NIGHT = 10.700 + FEES.vorgutasu_oo   + FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis;
 
 function getLevel(price) {
   const lo = showFullCost ? THRESH_FULL_LO : THRESH_SPOT_LO;
@@ -643,14 +646,7 @@ async function loadData() {
   future.setDate(future.getDate() + 2);
 
   const raw = await fetchPrices(formatDate(past), formatDate(future));
-  // Deduplicate - API returns 4x per hour (15min intervals) but price is same, keep first
-  const hourly = {};
-  raw.forEach(d => {
-    const eetHour = new Date(d.ts).toLocaleString('sv-SE', { timeZone: 'Europe/Tallinn', hour: '2-digit', hour12: false }).slice(0,2);
-    const key = `${formatDateEET(d.ts)}_${eetHour}`;
-    if (!hourly[key]) hourly[key] = d;
-  });
-  return Object.values(hourly).sort((a,b) => a.ts - b.ts);
+  return raw.sort((a,b) => a.ts - b.ts);
 }
 
 function filterByDay(data, dateStr) {
@@ -665,9 +661,15 @@ function renderApp(data) {
   const todayData = filterByDay(data, todayStr);
   const tomorrowData = filterByDay(data, tomorrowStr);
 
-  // Current hour price
+  // Current 15-min slot price
   const currentHour = now.getHours();
-  const currentEntry = todayData.find(d => new Date(d.ts).getHours() === currentHour);
+  const nowTs = now.getTime();
+  const slotStart = Math.floor(nowTs / 900000) * 900000;
+  const currentEntry = todayData.find(d => d.ts === slotStart)
+    || todayData.reduce((best, d) => {
+      if (d.ts > nowTs) return best;
+      return (!best || d.ts > best.ts) ? d : best;
+    }, null);
   const currentRaw = currentEntry ? currentEntry.price : null;
   const currentSenti = currentRaw !== null ? parseFloat(euroPerMWh_to_senti(currentRaw)) : null;
 
@@ -680,7 +682,7 @@ function renderApp(data) {
   const heroPriceSenti = currentEntry ? displayPrice(currentSenti, currentEntry.ts) : null;
   const level = heroPriceSenti !== null ? getLevel(heroPriceSenti) : { label: '–', color: '#4a6080', bg: 'transparent' };
 
-  const hasTomorrow = tomorrowData.length >= 20 && tomorrowData.some(d => d.price > 0);
+  const hasTomorrow = tomorrowData.length >= 80 && tomorrowData.some(d => d.price > 0);
 
   document.getElementById('statusText').textContent = 'REAALAEG · ' + now.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
 
@@ -694,7 +696,7 @@ function renderApp(data) {
 
     <div class="hero">
       <div>
-        <div class="current-label">${showFullCost ? 'Praegune börsihind koos kõikide lisatasudega' : 'Praegune börsihind ilma lisatasudeta'} (${pad(currentHour)}:00–${pad(currentHour+1)}:00)</div>
+        <div class="current-label">${showFullCost ? 'Praegune hind koos kõikide lisatasudega' : 'Praegune börsihind ilma lisatasudeta'} (${currentEntry ? (() => { const d=new Date(currentEntry.ts); const m=d.getMinutes(); return pad(d.getHours())+':'+pad(m)+'–'+pad(m===45?d.getHours()+1:d.getHours())+':'+pad(m===45?0:m+15); })() : pad(currentHour)+':00'})</div>
         <div class="current-price" id="heroPriceVal" style="color:${level.color}">
           ${heroPriceSenti !== null ? heroPriceSenti : '–'}
           <span class="current-unit">s/kWh</span>
@@ -725,7 +727,7 @@ function renderApp(data) {
 
     <div class="hours-section" id="nextHoursSection">
       <div class="section-header">
-        <div class="section-title">Järgmised 5 tundi</div>
+        <div class="section-title">Järgmised perioodid (15 min)</div>
       </div>
       <div class="next-hours" id="nextHoursGrid"></div>
     </div>
@@ -799,16 +801,19 @@ function renderInfoPanel() {
   ];
 
   const fiksPakett = 8.629;
-  const fixedExtrasDay = FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis + FEES.vorgutasu_paev;
+  const spotLo = THRESH_SPOT_LO;
+  const spotHi = THRESH_SPOT_HI;
+  const fullLo = THRESH_FULL_LO;
+  const fullHi = THRESH_FULL_HI;
 
   const dot = (color) =>
     `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:8px;flex-shrink:0;margin-top:1px"></span>`;
 
   const colorRow = (dotColor, label, numStr) =>
-    `<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:9px">
+    `<div style="display:flex;align-items:center;gap:0;margin-bottom:9px">
       ${dot(dotColor)}
-      <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:${dotColor};min-width:72px">${label}</span>
-      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text);min-width:84px">${numStr}</span>
+      <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:${dotColor};min-width:80px">${label}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text)">${numStr}</span>
     </div>`;
 
   panel.innerHTML = `
@@ -817,16 +822,16 @@ function renderInfoPanel() {
 
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Kogukulu (s/kWh, KM-ga)</div>
       <div style="margin-bottom:20px">
-        ${colorRow('#00e5a0', 'Odav',     '&lt; 15')}
-        ${colorRow('#f0c040', 'Keskmine', '15 – 25')}
-        ${colorRow('#ff5555', 'Kallis',   '&ge; 25')}
+        ${colorRow('#00e5a0', 'Odav',     '&lt; ' + fullLo.toFixed(0))}
+        ${colorRow('#f0c040', 'Keskmine', fullLo.toFixed(0) + ' – ' + fullHi.toFixed(0))}
+        ${colorRow('#ff5555', 'Kallis',   '&ge; ' + fullHi.toFixed(0))}
       </div>
 
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Börsihind (s/kWh, KM-ga)</div>
       <div style="margin-bottom:24px">
-        ${colorRow('#00e5a0', 'Odav',     '&lt; 7')}
-        ${colorRow('#f0c040', 'Keskmine', '7 – 17')}
-        ${colorRow('#ff5555', 'Kallis',   '&ge; 17')}
+        ${colorRow('#00e5a0', 'Odav',     '&lt; ' + spotLo.toFixed(0))}
+        ${colorRow('#f0c040', 'Keskmine', spotLo.toFixed(0) + ' – ' + spotHi.toFixed(0))}
+        ${colorRow('#ff5555', 'Kallis',   '&ge; ' + spotHi.toFixed(0))}
       </div>
 
       <div class="section-title" style="margin-bottom:14px">Tasude arvestus</div>
@@ -846,7 +851,6 @@ function renderInfoPanel() {
           </tr>`).join('')}
         </tbody>
       </table>
-
 
 
       <div class="section-title" style="margin:22px 0 10px">Elektriauto kulu arvestus</div>
@@ -896,6 +900,30 @@ function switchTab(tab, btn) {
   }
 }
 
+function aggregateToDaily(data) {
+  const byDay = {};
+  data.forEach(d => {
+    const key = formatDateEET(d.ts);
+    if (!byDay[key]) byDay[key] = { ts: d.ts, priceSum: d.price, count: 1 };
+    else { byDay[key].priceSum += d.price; byDay[key].count++; }
+  });
+  return Object.values(byDay)
+    .map(v => ({ ts: v.ts, price: v.priceSum / v.count }))
+    .sort((a,b) => a.ts - b.ts);
+}
+
+function aggregateToHourly(data) {
+  const byHour = {};
+  data.forEach(d => {
+    const key = `${formatDateEET(d.ts)}_${pad(new Date(d.ts).getHours())}`;
+    if (!byHour[key]) byHour[key] = { ts: d.ts, priceSum: d.price, count: 1 };
+    else { byHour[key].priceSum += d.price; byHour[key].count++; }
+  });
+  return Object.values(byHour)
+    .map(v => ({ ts: v.ts, price: v.priceSum / v.count }))
+    .sort((a,b) => a.ts - b.ts);
+}
+
 function drawChart(data, label) {
   const ctx = document.getElementById('priceChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
@@ -903,12 +931,15 @@ function drawChart(data, label) {
   const now = new Date();
   const currentHour = now.getHours();
 
+  // For week view, aggregate to hourly (one bar per hour)
+  if (label === '7 päeva') data = aggregateToHourly(data);
+
   const labels = data.map(d => {
     const dt = new Date(d.ts);
     if (label === '7 päeva') {
-      return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}h`;
+      return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}_${pad(dt.getHours())}`;
     }
-    return pad(dt.getHours()) + ':00';
+    return pad(dt.getHours()) + ':' + pad(dt.getMinutes());
   });
 
   const prices = data.map(d => displayPrice(parseFloat(euroPerMWh_to_senti(d.price)), d.ts));
@@ -924,7 +955,10 @@ function drawChart(data, label) {
       if (diff < minDiff) { minDiff = diff; currentIndex = i; }
     });
   } else if (label === 'Täna') {
-    currentIndex = data.findIndex(d => new Date(d.ts).getHours() === currentHour);
+    const nowTs2 = Date.now();
+    const slotStart2 = Math.floor(nowTs2 / 900000) * 900000;
+    currentIndex = data.findIndex(d => d.ts === slotStart2);
+    if (currentIndex < 0) currentIndex = data.reduce((best, d, i) => d.ts <= nowTs2 ? i : best, -1);
   }
 
   // Custom plugin for vertical line
@@ -946,44 +980,48 @@ function drawChart(data, label) {
     }
   };
 
+  // Custom plugin: üks punktiirjoon mis järgib päeva/öö fikseeritud paketi hinda
+  const fixedPriceLinePlugin = {
+    id: 'fixedPriceLine',
+    afterDatasetsDraw(chart) {
+      if (!showFullCost) return;
+      const { ctx, scales: { x, y } } = chart;
+      if (!data.length) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(160,160,160,0.30)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath();
+      let started = false;
+      data.forEach((d, i) => {
+        const fixVal = isNightTariff(d.ts) ? FIXED_PKG_NIGHT : FIXED_PKG_DAY;
+        const xPos = x.getPixelForValue(i);
+        const yPos = y.getPixelForValue(fixVal);
+        if (!started) { ctx.moveTo(xPos, yPos); started = true; }
+        else ctx.lineTo(xPos, yPos);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
   const gradient = ctx.createLinearGradient(0, 0, 0, 200);
   gradient.addColorStop(0, 'rgba(0,229,160,0.3)');
   gradient.addColorStop(1, 'rgba(0,229,160,0)');
 
-  // Punktiirjoon kogukulu režiimis: päeval 18.004, öösel/nädalavahetusel 16.004
-  const refLineDatasets = showFullCost ? [
-    {
-      label: 'Fikseeritud lävi',
-      data: data.map(d => isNightTariff(d.ts) ? THRESH_FULL_REF_NIGHT : THRESH_FULL_REF_DAY),
-      type: 'line',
-      borderColor: '#888888',
-      borderWidth: 1.5,
-      borderDash: [6, 4],
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      fill: false,
-      tension: 0,
-      order: 0,
-    }
-  ] : [];
-
   chartInstance = new Chart(ctx, {
     type: 'bar',
-    plugins: [currentLinePlugin],
+    plugins: [currentLinePlugin, fixedPriceLinePlugin],
     data: {
       labels,
-      datasets: [
-        {
-          label: 'Hind (s/kWh)',
-          data: prices,
-          backgroundColor: colors.map(c => c + '99'),
-          borderColor: colors,
-          borderWidth: 1,
-          borderRadius: 4,
-          order: 1,
-        },
-        ...refLineDatasets
-      ]
+      datasets: [{
+        label: 'Hind (s/kWh)',
+        data: prices,
+        backgroundColor: colors.map(c => c + '99'),
+        borderColor: colors,
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
     },
     options: {
       responsive: true,
@@ -997,11 +1035,7 @@ function drawChart(data, label) {
           titleFont: { family: 'Space Mono', size: 11 },
           bodyFont: { family: 'Space Mono', size: 13 },
           callbacks: {
-            label: ctx => {
-              if (ctx.datasetIndex === 0) return ` ${ctx.raw} s/kWh`;
-              if (ctx.datasetIndex === 1) return ` ${ctx.raw.toFixed(2)} s/kWh (päev lävi)`;
-              return ` ${ctx.raw.toFixed(2)} s/kWh (öö lävi)`;
-            }
+            label: ctx => ` ${ctx.raw} s/kWh`
           }
         }
       },
@@ -1010,10 +1044,35 @@ function drawChart(data, label) {
           ticks: {
             color: '#4a6080',
             font: { family: 'Space Mono', size: 9 },
-            maxRotation: 45,
-            maxTicksLimit: label === '7 päeva' ? 14 : 24
+            maxRotation: 0,
+            autoSkip: false,
+            callback: label === '7 päeva'
+              ? function(val, idx) {
+                  const lbl = labels[idx];
+                  if (!lbl) return '';
+                  const [datePart, hour] = lbl.split('_');
+                  return hour === '00' ? datePart : '';
+                }
+              : function(val, idx) {
+                  const lbl = labels[idx];
+                  if (!lbl) return '';
+                  const [h, m] = lbl.split(':');
+                  return m === '00' ? String(parseInt(h)) : '';
+                }
           },
-          grid: { color: 'rgba(255,255,255,0.03)' }
+          grid: {
+            color: label === '7 päeva'
+              ? function(ctx2) {
+                  const lbl = labels[ctx2.index] || '';
+                  const hour = lbl.split('_')[1];
+                  return hour === '00' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0)';
+                }
+              : function(ctx2) {
+                  const lbl = labels[ctx2.index] || '';
+                  const m = lbl.split(':')[1];
+                  return m === '00' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0)';
+                }
+          }
         },
         y: {
           ticks: {
@@ -1022,7 +1081,8 @@ function drawChart(data, label) {
             callback: v => v + ' s'
           },
           grid: { color: 'rgba(255,255,255,0.05)' },
-          beginAtZero: true
+          beginAtZero: true,
+          suggestedMax: showFullCost ? Math.max(FIXED_PKG_DAY, FIXED_PKG_NIGHT) * 1.08 : undefined
         }
       }
     }
@@ -1079,32 +1139,32 @@ function drawNextHours(data, currentHour) {
   const grid = document.getElementById('nextHoursGrid');
   if (!grid) return;
 
-  // Get current + next 4 hours (5 total) — timestamp-based to handle midnight crossover
+  // Get next 8 fifteen-minute slots (skip current, start from next)
   const upcoming = [];
   const nowTs = Date.now();
-  const currentHourStart = new Date(nowTs);
-  currentHourStart.setMinutes(0, 0, 0);
-  for (let i = 0; i < 5; i++) {
-    const slotTs = currentHourStart.getTime() + i * 3600000;
-    const slotHour = new Date(slotTs).toLocaleString('sv-SE', { timeZone: 'Europe/Tallinn', hour: '2-digit', hour12: false }).slice(0, 2);
-    const slotDate = new Date(slotTs).toLocaleDateString('sv-SE', { timeZone: 'Europe/Tallinn' });
-    const entry = data.find(d => {
-      const dDate = new Date(d.ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Tallinn' });
-      const dHour = new Date(d.ts).toLocaleString('sv-SE', { timeZone: 'Europe/Tallinn', hour: '2-digit', hour12: false }).slice(0, 2);
-      return dDate === slotDate && dHour === slotHour;
-    });
-    if (entry) upcoming.push({ hour: parseInt(slotHour), ts: entry.ts, price: displayPrice(parseFloat(euroPerMWh_to_senti(entry.price)), entry.ts), isCurrent: i === 0 });
+  const currentSlotTs = Math.floor(nowTs / 900000) * 900000;
+  for (let i = 1; i <= 8; i++) {
+    const slotTs = currentSlotTs + i * 900000;
+    const entry = data.find(d => d.ts === slotTs)
+      || data.find(d => Math.abs(d.ts - slotTs) < 450000 && d.ts >= slotTs - 1000);
+    if (entry) {
+      const dt = new Date(entry.ts);
+      upcoming.push({
+        label: pad(dt.getHours()) + ':' + pad(dt.getMinutes()),
+        ts: entry.ts,
+        price: displayPrice(parseFloat(euroPerMWh_to_senti(entry.price)), entry.ts),
+      });
+    }
   }
 
   if (!upcoming.length) { section.style.display = 'none'; return; }
   section.style.display = '';
 
-  grid.innerHTML = upcoming.map((u, i) => {
+  grid.innerHTML = upcoming.map((u) => {
     const col = getColor(u.price);
     const bg = col + '22';
-    return `<div class="next-hour-card ${u.isCurrent ? 'next-current' : ''}" style="background:${bg}">
-      ${u.isCurrent ? '<div class="next-hour-label">PRAEGU</div>' : '<div class="next-hour-label">&nbsp;</div>'}
-      <div class="next-hour-time">${pad(u.hour)}:00</div>
+    return `<div class="next-hour-card" style="background:${bg}">
+      <div class="next-hour-time">${u.label}</div>
       <div class="next-hour-price" style="color:${col}">${u.price}</div>
       <div class="next-hour-unit">s/kWh</div>
     </div>`;
