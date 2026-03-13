@@ -604,14 +604,15 @@ function getColor(price) {
   return getComputedStyle(document.documentElement).getPropertyValue('--expensive').trim();
 }
 
-// Fixed package reference: 8.629 s/kWh (incl KM)
-// Fees without marginaal (incl KM): taastuvenergia+varustuskindlus+tasakaalustamine+aktsiis = 2.704
-// + võrgutasu päev 4.58 → kogukulu_lo = 8.629+4.58+2.704 = 15.913
-const THRESH_SPOT_LO  = 8.629;
-const THRESH_SPOT_HI  = 8.629 * 2;
-// THRESH_FULL_LO = fiksPakett(8.629) + võrk päev(4.58) + taastuvenergia(1.0416) + varustuskindlus(0.9399) + tasakaalustamine(0.4625) + aktsiis(0.2604)
-const THRESH_FULL_LO  = 15.9134;
-const THRESH_FULL_HI  = THRESH_FULL_LO * 2;
+// Fikseeritud pakett 8.629 s/kWh (KM-ta) × 1.24 = 10.700 s/kWh (KM-ga)
+// Päev lävi: 10.700 + võrgutasu päev(4.58) + taastuvenergia(1.0416) + varustuskindlus(0.9399) + tasakaalustamine(0.4625) + aktsiis(0.2604) = 18.004
+// Öö lävi:   10.700 + võrgutasu öö(2.60)  + taastuvenergia(1.0416) + varustuskindlus(0.9399) + tasakaalustamine(0.4625) + aktsiis(0.2604) = 16.004
+const THRESH_FULL_REF_DAY   = 18.004;
+const THRESH_FULL_REF_NIGHT = 16.004;
+const THRESH_SPOT_LO  = 7;
+const THRESH_SPOT_HI  = 17;
+const THRESH_FULL_LO  = 15;
+const THRESH_FULL_HI  = 25;
 
 function getLevel(price) {
   const lo = showFullCost ? THRESH_FULL_LO : THRESH_SPOT_LO;
@@ -693,7 +694,7 @@ function renderApp(data) {
 
     <div class="hero">
       <div>
-        <div class="current-label">${showFullCost ? 'Praegune hind koos kõikide lisatasudega' : 'Praegune börsihind ilma lisatasudeta'} (${pad(currentHour)}:00–${pad(currentHour+1)}:00)</div>
+        <div class="current-label">${showFullCost ? 'Praegune börsihind koos kõikide lisatasudega' : 'Praegune börsihind ilma lisatasudeta'} (${pad(currentHour)}:00–${pad(currentHour+1)}:00)</div>
         <div class="current-price" id="heroPriceVal" style="color:${level.color}">
           ${heroPriceSenti !== null ? heroPriceSenti : '–'}
           <span class="current-unit">s/kWh</span>
@@ -798,39 +799,34 @@ function renderInfoPanel() {
   ];
 
   const fiksPakett = 8.629;
-  const spotLo = fiksPakett;
-  const spotHi = fiksPakett * 2;
   const fixedExtrasDay = FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis + FEES.vorgutasu_paev;
-  const fullLo = fiksPakett + fixedExtrasDay;
-  const fullHi = fullLo * 2;
 
   const dot = (color) =>
     `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:8px;flex-shrink:0;margin-top:1px"></span>`;
 
-  const colorRow = (dotColor, label, numStr, desc) =>
+  const colorRow = (dotColor, label, numStr) =>
     `<div style="display:flex;align-items:flex-start;gap:0;margin-bottom:9px">
       ${dot(dotColor)}
       <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:${dotColor};min-width:72px">${label}</span>
       <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text);min-width:84px">${numStr}</span>
-      <span style="font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);line-height:1.4">${desc}</span>
     </div>`;
 
   panel.innerHTML = `
     <div style="margin-top:8px">
       <div class="section-title" style="margin-bottom:14px">Värvikoodid</div>
 
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Kogukulu päeval (s/kWh, KM-ga)</div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Kogukulu (s/kWh, KM-ga)</div>
       <div style="margin-bottom:20px">
-        ${colorRow('#00e5a0', 'Odav',     '&lt; ' + fullLo.toFixed(2), 'Odavam kui fikseeritud hinna pakkumine')}
-        ${colorRow('#f0c040', 'Keskmine', fullLo.toFixed(2) + ' – ' + fullHi.toFixed(2), 'Kallim kui fikseeritud hinna pakkumine')}
-        ${colorRow('#ff5555', 'Kallis',   '&gt; ' + fullHi.toFixed(2), '2× kallim kui fikseeritud hinna pakkumine')}
+        ${colorRow('#00e5a0', 'Odav',     '&lt; 15')}
+        ${colorRow('#f0c040', 'Keskmine', '15 – 25')}
+        ${colorRow('#ff5555', 'Kallis',   '&ge; 25')}
       </div>
 
       <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Börsihind (s/kWh, KM-ga)</div>
       <div style="margin-bottom:24px">
-        ${colorRow('#00e5a0', 'Odav',     '&lt; ' + spotLo.toFixed(2), 'Odavam kui fikseeritud hinna pakkumine')}
-        ${colorRow('#f0c040', 'Keskmine', spotLo.toFixed(2) + ' – ' + spotHi.toFixed(2), 'Kallim kui fikseeritud hinna pakkumine')}
-        ${colorRow('#ff5555', 'Kallis',   '&gt; ' + spotHi.toFixed(2), '2× kallim kui fikseeritud hinna pakkumine')}
+        ${colorRow('#00e5a0', 'Odav',     '&lt; 7')}
+        ${colorRow('#f0c040', 'Keskmine', '7 – 17')}
+        ${colorRow('#ff5555', 'Kallis',   '&ge; 17')}
       </div>
 
       <div class="section-title" style="margin-bottom:14px">Tasude arvestus</div>
@@ -851,11 +847,7 @@ function renderInfoPanel() {
         </tbody>
       </table>
 
-      <div style="font-family:'Space Mono',monospace;font-size:9px;color:#444;margin-top:16px;line-height:1.8">
-        Viide: Elektrum fikseeritud pakett 8.629 s/kWh (KM-ga) · Elektrilevi Võrk 4<br>
-        Kogukulu lävi ei sisalda marginaali (marginaal kehtib börsipaketis)<br>
-        Allikas: Elering NPS API · Nord Pool EE
-      </div>
+
 
       <div class="section-title" style="margin:22px 0 10px">Elektriauto kulu arvestus</div>
       <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text);line-height:1.7">Tarbimise arvestus: 18 kWh/100km · 50 kWh akuga saab sõita 278 km</div>
@@ -958,19 +950,53 @@ function drawChart(data, label) {
   gradient.addColorStop(0, 'rgba(0,229,160,0.3)');
   gradient.addColorStop(1, 'rgba(0,229,160,0)');
 
+  // Kaks püsivat punktiirjoont kogukulu režiimis: päev (18.004) ja öö/nädalavahetus (16.004)
+  const refLineDatasets = showFullCost ? [
+    {
+      label: 'Fikseeritud lävi päev',
+      data: Array(prices.length).fill(THRESH_FULL_REF_DAY),
+      type: 'line',
+      borderColor: '#888888',
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 0,
+    },
+    {
+      label: 'Fikseeritud lävi öö',
+      data: Array(prices.length).fill(THRESH_FULL_REF_NIGHT),
+      type: 'line',
+      borderColor: '#555555',
+      borderWidth: 1,
+      borderDash: [3, 5],
+      pointRadius: 0,
+      pointHoverRadius: 0,
+      fill: false,
+      tension: 0,
+      order: 0,
+    }
+  ] : [];
+
   chartInstance = new Chart(ctx, {
     type: 'bar',
     plugins: [currentLinePlugin],
     data: {
       labels,
-      datasets: [{
-        label: 'Hind (s/kWh)',
-        data: prices,
-        backgroundColor: colors.map(c => c + '99'),
-        borderColor: colors,
-        borderWidth: 1,
-        borderRadius: 4,
-      }]
+      datasets: [
+        {
+          label: 'Hind (s/kWh)',
+          data: prices,
+          backgroundColor: colors.map(c => c + '99'),
+          borderColor: colors,
+          borderWidth: 1,
+          borderRadius: 4,
+          order: 1,
+        },
+        ...refLineDatasets
+      ]
     },
     options: {
       responsive: true,
@@ -984,7 +1010,11 @@ function drawChart(data, label) {
           titleFont: { family: 'Space Mono', size: 11 },
           bodyFont: { family: 'Space Mono', size: 13 },
           callbacks: {
-            label: ctx => ` ${ctx.raw} s/kWh`
+            label: ctx => {
+              if (ctx.datasetIndex === 0) return ` ${ctx.raw} s/kWh`;
+              if (ctx.datasetIndex === 1) return ` ${ctx.raw.toFixed(2)} s/kWh (päev lävi)`;
+              return ` ${ctx.raw.toFixed(2)} s/kWh (öö lävi)`;
+            }
           }
         }
       },
