@@ -950,28 +950,15 @@ function drawChart(data, label) {
   gradient.addColorStop(0, 'rgba(0,229,160,0.3)');
   gradient.addColorStop(1, 'rgba(0,229,160,0)');
 
-  // Kaks püsivat punktiirjoont kogukulu režiimis: päev (18.004) ja öö/nädalavahetus (16.004)
+  // Punktiirjoon kogukulu režiimis: päeval 18.004, öösel/nädalavahetusel 16.004
   const refLineDatasets = showFullCost ? [
     {
-      label: 'Fikseeritud lävi päev',
-      data: Array(prices.length).fill(THRESH_FULL_REF_DAY),
+      label: 'Fikseeritud lävi',
+      data: data.map(d => isNightTariff(d.ts) ? THRESH_FULL_REF_NIGHT : THRESH_FULL_REF_DAY),
       type: 'line',
       borderColor: '#888888',
       borderWidth: 1.5,
       borderDash: [6, 4],
-      pointRadius: 0,
-      pointHoverRadius: 0,
-      fill: false,
-      tension: 0,
-      order: 0,
-    },
-    {
-      label: 'Fikseeritud lävi öö',
-      data: Array(prices.length).fill(THRESH_FULL_REF_NIGHT),
-      type: 'line',
-      borderColor: '#555555',
-      borderWidth: 1,
-      borderDash: [3, 5],
       pointRadius: 0,
       pointHoverRadius: 0,
       fill: false,
