@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Elektrihind EE</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0a0e14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Elektrihind">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #080d16;
+    --surface: #101827;
+    --border: #1c2f48;
+    --accent: #00e5a0;
+    --accent2: #ff6b35;
+    --accent3: #5eaeff;
+    --text: #ddeeff;
+    --muted: #4a6a8a;
+    --cheap: #00e5a0;
+    --mid: #f0c040;
+    --expensive: #ff5555;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 20px;
+  }
+
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    font-size: 11px;
+    font-family: 'Space Mono', monospace;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  h1 {
+    font-size: clamp(28px, 5vw, 48px);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -2px;
+    color: var(--text);
+  }
+
+  .status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Current price hero */
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 32px;
+    margin-bottom: 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    right: -50px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(0,229,160,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .current-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .current-price {
+    font-size: clamp(48px, 8vw, 80px);
+    font-weight: 800;
+    letter-spacing: -3px;
+    line-height: 1;
+    transition: color 0.5s;
+  }
+
+  .current-unit {
+    font-size: 18px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .current-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .price-tag {
+    text-align: right;
+  }
+
+  .price-level {
+    font-size: 12px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid;
+    margin-bottom: 8px;
+    display: inline-block;
+  }
+
+  .change {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Cost mode toggle */
+  .tomorrow-msg {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 140px;
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: #5eaeff;
+    letter-spacing: 0.2px;
+    text-align: center;
+    padding: 24px;
+  }
+
+  .cost-toggle {
+    display: flex;
+    background: rgba(94,174,255,0.07);
+    border: 1px solid rgba(94,174,255,0.12);
+    border-radius: 14px;
+    padding: 4px;
+    gap: 3px;
+    margin-bottom: 22px;
+    max-width: 340px;
+  }
+  .cost-btn {
+    flex: 1;
+    padding: 11px 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(.4,0,.2,1);
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+  }
+  .cost-btn.active {
+    background: linear-gradient(135deg, #1a3a6e, #102244);
+    color: #5eaeff;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(94,174,255,0.15);
+  }
+  .cost-breakdown {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: rgba(94,174,255,0.55);
+    letter-spacing: 0.5px;
+    margin-top: 6px;
+  }
+
+  /* Stats row */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+
+  .stat-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Chart */
+  .chart-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 10px;
+  }
+
+  .tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 700;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 200px;
+  }
+
+  canvas#priceChart {
+    width: 100% !important;
+    height: 200px !important;
+  }
+
+  /* Hourly list */
+  .hours-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+
+  .hours-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .hour-cell {
+    border-radius: 10px;
+    padding: 10px 6px;
+    text-align: center;
+    border: 1px solid transparent;
+    cursor: default;
+    transition: transform 0.15s, border-color 0.15s;
+    position: relative;
+  }
+
+  .hour-cell:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255,255,255,0.1);
+  }
+
+  .hour-cell.current-hour {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 12px rgba(0,229,160,0.2);
+  }
+
+  .hour-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+
+  .hour-price {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Loading */
+  .loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    gap: 16px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 2px;
+  }
+
+  .spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg {
+    background: rgba(255,68,68,0.1);
+    border: 1px solid rgba(255,68,68,0.3);
+    border-radius: 12px;
+    padding: 20px;
+    color: #ff8888;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .info-note {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  .next-hours {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+    flex-wrap: nowrap;
+  }
+
+  .next-hour-card {
+    flex: 1;
+    min-width: 0;
+    border-radius: 12px;
+    padding: 12px 6px;
+    text-align: center;
+    border: 1px solid transparent;
+  }
+
+  .next-hour-card.next-current {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(0,229,160,0.2);
+  }
+
+  .next-hour-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .next-hour-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+
+  .next-hour-price {
+    font-size: clamp(11px, 2.5vw, 17px);
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .next-hour-unit {
+    font-family: 'Space Mono', monospace;
+    font-size: 7px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  footer {
+    text-align: center;
+    padding: 32px 0 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  @media (max-width: 600px) {
+    .hero { grid-template-columns: 1fr; }
+    .price-tag { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div style="display:flex;align-items:center;gap:14px">
+      <img src="data:image/png;base64,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" style="width:52px;height:52px;border-radius:50%;">
+      <h1>Elektrihind</h1>
+    </div>
+    <div class="status-badge">
+      <div class="dot"></div>
+      <span id="statusText">Laadin...</span>
+    </div>
+  </header>
+
+  <div id="appContent">
+    <div class="loading">
+      <div class="spinner"></div>
+      LAADIN ANDMEID
+    </div>
+  </div>
+
+  <footer>
+    <a href="https://dashboard.elering.ee" target="_blank">Elering NPS API</a> &nbsp;·&nbsp; Nord Pool EE &nbsp;·&nbsp; KM 24%
+  </footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const API_BASE = '/api/prices';
+
+let allData = [];
+let chartInstance = null;
+let currentTab = 'today';
+let showFullCost = true;
+
+// Fee constants (s/kWh, KM-ga)
+const FEES = {
+  marginaal:        0.5000,  // KM-ga (KM sees)
+  vorgutasu_paev:   4.5800,  // KM-ga (KM sees), E-R 7-22
+  vorgutasu_oo:     2.6000,  // KM-ga (KM sees), E-R 22-7 + L-P
+  taastuvenergia:   1.0416,  // KM-ga (0.840 × 1.24)
+  varustuskindlus:  0.9399,  // KM-ga (0.758 × 1.24)
+  tasakaalustamine: 0.4625,  // KM-ga (0.373 × 1.24)
+  aktsiis:          0.2604,  // KM-ga (0.210 × 1.24)
+};
+
+function isNightTariff(ts) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Tallinn', weekday: 'short', hour: 'numeric', hour12: false
+  }).formatToParts(new Date(ts));
+  const wd = parts.find(p => p.type === 'weekday').value;
+  const h  = parseInt(parts.find(p => p.type === 'hour').value);
+  if (wd === 'Sat' || wd === 'Sun') return true;
+  return h < 7 || h >= 22;
+}
+
+function fixedExtras(ts) {
+  const net = isNightTariff(ts) ? FEES.vorgutasu_oo : FEES.vorgutasu_paev;
+  return FEES.marginaal + net + FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis;
+}
+
+function displayPrice(nordpoolSenti, ts) {
+  if (!showFullCost) return nordpoolSenti;
+  return parseFloat((nordpoolSenti + fixedExtras(ts)).toFixed(1));
+}
+
+function setCostMode(full) {
+  showFullCost = full;
+  showInfo = false;
+  const savedTab = currentTab;
+  renderApp(allData);
+  if (savedTab !== 'today') {
+    const btn = document.querySelector(`.tab[onclick="switchTab('${savedTab}', this)"]`);
+    if (btn) switchTab(savedTab, btn);
+  }
+}
+
+function pad(n) { return String(n).padStart(2,'0'); }
+
+function formatDate(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+
+function formatDateEET(ts) {
+  // Format timestamp as YYYY-MM-DD in EET (Europe/Tallinn)
+  return new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Europe/Tallinn' });
+}
+
+function euroPerMWh_to_senti(v) {
+  // EUR/MWh → senti/kWh (×0.1), with 24% VAT
+  return (v * 0.1 * 1.24).toFixed(1);
+}
+
+function getColor(price) {
+  const lo = showFullCost ? THRESH_FULL_LO : THRESH_SPOT_LO;
+  const hi = showFullCost ? THRESH_FULL_HI : THRESH_SPOT_HI;
+  if (price < lo) return getComputedStyle(document.documentElement).getPropertyValue('--cheap').trim();
+  if (price < hi) return getComputedStyle(document.documentElement).getPropertyValue('--mid').trim();
+  return getComputedStyle(document.documentElement).getPropertyValue('--expensive').trim();
+}
+
+// Fixed package reference: 8.629 s/kWh (incl KM)
+// Fees without marginaal (incl KM): taastuvenergia+varustuskindlus+tasakaalustamine+aktsiis = 2.704
+// + võrgutasu päev 4.58 → kogukulu_lo = 8.629+4.58+2.704 = 15.913
+const THRESH_SPOT_LO  = 7;
+const THRESH_SPOT_HI  = 17;
+// Kogukulu: odav < 15, keskmine 15–25, kallis ≥ 25
+const THRESH_FULL_LO  = 15;
+const THRESH_FULL_HI  = 25;
+
+// Fikseeritud paketi kogukulu referentsjoon graafikus (10.700 + kõik tasud v.a. marginaal)
+const FIXED_PKG_DAY   = 10.700 + FEES.vorgutasu_paev + FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis;
+const FIXED_PKG_NIGHT = 10.700 + FEES.vorgutasu_oo   + FEES.taastuvenergia + FEES.varustuskindlus + FEES.tasakaalustamine + FEES.aktsiis;
+
+function getLevel(price) {
+  const lo = showFullCost ? THRESH_FULL_LO : THRESH_SPOT_LO;
+  const hi = showFullCost ? THRESH_FULL_HI : THRESH_SPOT_HI;
+  if (price < lo) return { label: 'ODAV',    color: '#00e5a0', bg: 'rgba(0,229,160,0.1)' };
+  if (price < hi) return { label: 'KESKMINE',color: '#f0c040', bg: 'rgba(240,192,64,0.1)' };
+  return             { label: 'KALLIS',   color: '#ff5555', bg: 'rgba(255,85,85,0.1)' };
+}
+
+async function fetchPrices(start, end) {
+  // Fetch with 2h buffer on both sides to cover EET (UTC+2)
+  const url = `${API_BASE}?start=${encodeURIComponent(start+'T00:00:00.000Z')}&end=${encodeURIComponent(end+'T23:59:59.000Z')}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('API viga: ' + res.status);
+  const json = await res.json();
+  const entries = json.data?.ee || json.data || [];
+  return entries.map(d => ({
+    ts: d.timestamp * 1000,
+    price: d.price ?? 0
+  }));
+}
+
+async function loadData() {
+  const today = new Date();
+  const past = new Date(today);
+  past.setDate(past.getDate() - 6);
+  const future = new Date(today);
+  future.setDate(future.getDate() + 2);
+
+  const raw = await fetchPrices(formatDate(past), formatDate(future));
+  return raw.sort((a,b) => a.ts - b.ts);
+}
+
+function filterByDay(data, dateStr) {
+  return data.filter(d => formatDateEET(d.ts) === dateStr);
+}
+
+function renderApp(data) {
+  const now = new Date();
+  const todayStr = formatDateEET(now.getTime());
+  const tomorrowStr = formatDateEET(now.getTime() + 86400000);
+
+  const todayData = filterByDay(data, todayStr);
+  const tomorrowData = filterByDay(data, tomorrowStr);
+
+  // Current 15-min slot price
+  const currentHour = now.getHours();
+  const nowTs = now.getTime();
+  const slotStart = Math.floor(nowTs / 900000) * 900000;
+  const currentEntry = todayData.find(d => d.ts === slotStart)
+    || todayData.reduce((best, d) => {
+      if (d.ts > nowTs) return best;
+      return (!best || d.ts > best.ts) ? d : best;
+    }, null);
+  const currentRaw = currentEntry ? currentEntry.price : null;
+  const currentSenti = currentRaw !== null ? parseFloat(euroPerMWh_to_senti(currentRaw)) : null;
+
+  // Stats for today
+  const todayPrices = todayData.map(d => parseFloat(euroPerMWh_to_senti(d.price)));
+  const minP = todayPrices.length ? Math.min(...todayPrices) : 0;
+  const maxP = todayPrices.length ? Math.max(...todayPrices) : 0;
+  const avgP = todayPrices.length ? (todayPrices.reduce((a,b)=>a+b,0)/todayPrices.length) : 0;
+
+  const heroPriceSenti = currentEntry ? displayPrice(currentSenti, currentEntry.ts) : null;
+  const level = heroPriceSenti !== null ? getLevel(heroPriceSenti) : { label: '–', color: '#4a6080', bg: 'transparent' };
+
+  const hasTomorrow = tomorrowData.length >= 80 && tomorrowData.some(d => d.price > 0);
+
+  document.getElementById('statusText').textContent = 'REAALAEG · ' + now.toLocaleTimeString('et-EE', {hour:'2-digit',minute:'2-digit'});
+
+  const app = document.getElementById('appContent');
+  app.innerHTML = `
+    <div class="cost-toggle">
+      <button class="cost-btn ${showFullCost && !showInfo ? 'active' : ''}" id="btnFull" onclick="setCostMode(true)">Kogukulu</button>
+      <button class="cost-btn ${!showFullCost && !showInfo ? 'active' : ''}" id="btnSpot" onclick="setCostMode(false)">Börsihind</button>
+      <button class="cost-btn ${showInfo ? 'active' : ''}" id="btnInfo" onclick="setInfoTab(true)">Info</button>
+    </div>
+
+    <div class="hero">
+      <div>
+        <div class="current-label">${showFullCost ? 'Praegune hind koos kõikide lisatasudega' : 'Praegune börsihind ilma lisatasudeta'} (${currentEntry ? (() => { const d=new Date(currentEntry.ts); const m=d.getMinutes(); return pad(d.getHours())+':'+pad(m)+'–'+pad(m===45?d.getHours()+1:d.getHours())+':'+pad(m===45?0:m+15); })() : pad(currentHour)+':00'})</div>
+        <div class="current-price" id="heroPriceVal" style="color:${level.color}">
+          ${heroPriceSenti !== null ? heroPriceSenti : '–'}
+          <span class="current-unit">s/kWh</span>
+        </div>
+        <div class="current-time">${now.toLocaleDateString('et-EE', {weekday:'long', day:'numeric', month:'long'})}</div>
+      </div>
+      <div class="price-tag">
+        <div class="price-level" style="color:${level.color}; border-color:${level.color}; background:${level.bg}">${level.label}</div>
+        <div class="change" style="color:${level.color};display:flex;align-items:center;gap:6px">${showFullCost && heroPriceSenti !== null ? `<svg width="18" height="14" viewBox="0 0 24 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity:0.75"><path d="M2 10h20M5 10l2-5h10l2 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><circle cx="17" cy="13" r="2" stroke="currentColor" stroke-width="1.5"/><path d="M9 5.5h2.5M14 3l1 2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg><span>100km = ${(heroPriceSenti * 18 / 100).toFixed(2)} €</span>` : ''}</div>
+      </div>
+    </div>
+
+
+
+    <div class="chart-section">
+      <div class="section-header">
+        <div class="section-title">Hinnakõver</div>
+        <div class="tabs">
+          <button class="tab ${!hasTomorrow || currentTab==='today' ? 'active' : ''}" onclick="switchTab('today', this)">Täna</button>
+          <button class="tab ${currentTab==='tomorrow' ? 'active' : ''}" onclick="switchTab('tomorrow', this)">Homme</button>
+          <button class="tab ${currentTab==='week' ? 'active' : ''}" onclick="switchTab('week', this)">7 päeva</button>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+      </div>
+    </div>
+
+    <div class="hours-section" id="nextHoursSection">
+      <div class="section-header">
+        <div class="section-title">Järgmised perioodid (15 min)</div>
+      </div>
+      <div class="next-hours" id="nextHoursGrid"></div>
+    </div>
+
+    <div id="infoPanel" style="display:none"></div>
+  `;
+
+  window._allData = data;
+  window._todayStr = todayStr;
+  window._tomorrowStr = tomorrowStr;
+  window._currentHour = currentHour;
+  window._currentFullSenti = heroPriceSenti;
+
+  drawChart(todayData, 'Täna');
+  drawHours(todayData, currentHour, true);
+  drawNextHours([...todayData, ...tomorrowData], currentHour);
+}
+
+function clearTomorrowMsg() {
+  const canvas = document.getElementById('priceChart');
+  if (canvas) {
+    canvas.style.display = '';
+    const msg = canvas.parentElement && canvas.parentElement.querySelector('.tomorrow-msg');
+    if (msg) msg.style.display = 'none';
+  }
+}
+
+let showInfo = false;
+
+function setInfoTab(on) {
+  showInfo = on;
+  const hero = document.querySelector('.hero');
+  const chartSec = document.querySelector('.chart-section');
+  const hoursSec = document.getElementById('nextHoursSection');
+  const infoPanel = document.getElementById('infoPanel');
+  if (!infoPanel) return;
+  if (on) {
+    if (hero) hero.style.display = 'none';
+    if (chartSec) chartSec.style.display = 'none';
+    if (hoursSec) hoursSec.style.display = 'none';
+    infoPanel.style.display = '';
+    renderInfoPanel();
+  } else {
+    if (hero) hero.style.display = '';
+    if (chartSec) chartSec.style.display = '';
+    if (hoursSec) hoursSec.style.display = '';
+    infoPanel.style.display = 'none';
+  }
+  // update pill buttons
+  const btnFull = document.getElementById('btnFull');
+  const btnSpot = document.getElementById('btnSpot');
+  const btnInfo = document.getElementById('btnInfo');
+  if (btnFull) btnFull.classList.toggle('active', showFullCost && !on);
+  if (btnSpot) btnSpot.classList.toggle('active', !showFullCost && !on);
+  if (btnInfo) btnInfo.classList.toggle('active', on);
+}
+
+function renderInfoPanel() {
+  const panel = document.getElementById('infoPanel');
+  if (!panel) return;
+
+  // All values KM-incl (KM 24%)
+  const feeRows = [
+    { nimi: 'Marginaal (börsipaketis)',     vaartus: FEES.marginaal.toFixed(3) },
+    { nimi: 'Võrgutasu päev (E-R 7–22)',    vaartus: FEES.vorgutasu_paev.toFixed(3) },
+    { nimi: 'Võrgutasu öö (E-R 22–7, L-P)', vaartus: FEES.vorgutasu_oo.toFixed(3) },
+    { nimi: 'Taastuvenergia tasu',           vaartus: FEES.taastuvenergia.toFixed(3) },
+    { nimi: 'Varustuskindluse tasu',         vaartus: FEES.varustuskindlus.toFixed(3) },
+    { nimi: 'Tasakaalustamine',              vaartus: FEES.tasakaalustamine.toFixed(3) },
+    { nimi: 'Elektriaktsiis',                vaartus: FEES.aktsiis.toFixed(3) },
+  ];
+
+  const fiksPakett = 8.629;
+  const spotLo = THRESH_SPOT_LO;
+  const spotHi = THRESH_SPOT_HI;
+  const fullLo = THRESH_FULL_LO;
+  const fullHi = THRESH_FULL_HI;
+
+  const dot = (color) =>
+    `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${color};margin-right:8px;flex-shrink:0;margin-top:1px"></span>`;
+
+  const colorRow = (dotColor, label, numStr) =>
+    `<div style="display:flex;align-items:center;gap:0;margin-bottom:9px">
+      ${dot(dotColor)}
+      <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:600;color:${dotColor};min-width:80px">${label}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text)">${numStr}</span>
+    </div>`;
+
+  panel.innerHTML = `
+    <div style="margin-top:8px">
+      <div class="section-title" style="margin-bottom:14px">Värvikoodid</div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Kogukulu (s/kWh, KM-ga)</div>
+      <div style="margin-bottom:20px">
+        ${colorRow('#00e5a0', 'Odav',     '&lt; ' + fullLo.toFixed(0))}
+        ${colorRow('#f0c040', 'Keskmine', fullLo.toFixed(0) + ' – ' + fullHi.toFixed(0))}
+        ${colorRow('#ff5555', 'Kallis',   '&ge; ' + fullHi.toFixed(0))}
+      </div>
+
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px;letter-spacing:0.8px;text-transform:uppercase">Börsihind (s/kWh, KM-ga)</div>
+      <div style="margin-bottom:24px">
+        ${colorRow('#00e5a0', 'Odav',     '&lt; ' + spotLo.toFixed(0))}
+        ${colorRow('#f0c040', 'Keskmine', spotLo.toFixed(0) + ' – ' + spotHi.toFixed(0))}
+        ${colorRow('#ff5555', 'Kallis',   '&ge; ' + spotHi.toFixed(0))}
+      </div>
+
+      <div class="section-title" style="margin-bottom:14px">Tasude arvestus</div>
+      <div style="font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:10px">Kõik hinnad KM-ga (24%)</div>
+      <table style="width:100%;border-collapse:collapse;font-family:'Space Mono',monospace;font-size:11px">
+        <thead>
+          <tr style="color:var(--muted);border-bottom:1px solid #2a2a2a">
+            <th style="text-align:left;padding:4px 0;font-weight:normal">Tasu</th>
+            <th style="text-align:right;padding:4px 0;font-weight:normal">s/kWh</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${feeRows.map(r => `
+          <tr style="border-bottom:1px solid #1e1e1e">
+            <td style="padding:7px 0;color:var(--text)">${r.nimi}</td>
+            <td style="padding:7px 0;text-align:right;color:var(--accent);font-weight:bold">${r.vaartus}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+
+
+      <div class="section-title" style="margin:22px 0 10px">Elektriauto kulu arvestus</div>
+      <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text);line-height:1.7">Tarbimise arvestus: 18 kWh/100km · 50 kWh akuga saab sõita 278 km</div>
+    </div>
+  `;
+}
+
+function switchTab(tab, btn) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+
+  if (tab === 'week') {
+    clearTomorrowMsg();
+    drawChart(window._allData, '7 päeva');
+  } else if (tab === 'tomorrow') {
+    const d = filterByDay(window._allData, window._tomorrowStr);
+    const hasRealData = d.length >= 20 && d.some(x => x.price > 0);
+    if (!hasRealData) {
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      const canvas = document.getElementById('priceChart');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const wrap = canvas.parentElement;
+      let msg = wrap.querySelector('.tomorrow-msg');
+      if (!msg) {
+        msg = document.createElement('div');
+        msg.className = 'tomorrow-msg';
+        wrap.appendChild(msg);
+      }
+      msg.style.display = 'flex';
+      msg.innerHTML = 'Nord Pool homsed hinnad pole veel avaldatud';
+      canvas.style.display = 'none';
+      return;
+    } else {
+      const canvas = document.getElementById('priceChart');
+      canvas.style.display = '';
+      const msg = canvas.parentElement.querySelector('.tomorrow-msg');
+      if (msg) msg.style.display = 'none';
+    }
+    drawChart(d, 'Homme');
+  } else {
+    clearTomorrowMsg();
+    const d = filterByDay(window._allData, window._todayStr);
+    drawChart(d, 'Täna');
+  }
+}
+
+function aggregateToDaily(data) {
+  const byDay = {};
+  data.forEach(d => {
+    const key = formatDateEET(d.ts);
+    if (!byDay[key]) byDay[key] = { ts: d.ts, priceSum: d.price, count: 1 };
+    else { byDay[key].priceSum += d.price; byDay[key].count++; }
+  });
+  return Object.values(byDay)
+    .map(v => ({ ts: v.ts, price: v.priceSum / v.count }))
+    .sort((a,b) => a.ts - b.ts);
+}
+
+function aggregateToHourly(data) {
+  const byHour = {};
+  data.forEach(d => {
+    const key = `${formatDateEET(d.ts)}_${pad(new Date(d.ts).getHours())}`;
+    if (!byHour[key]) byHour[key] = { ts: d.ts, priceSum: d.price, count: 1 };
+    else { byHour[key].priceSum += d.price; byHour[key].count++; }
+  });
+  return Object.values(byHour)
+    .map(v => ({ ts: v.ts, price: v.priceSum / v.count }))
+    .sort((a,b) => a.ts - b.ts);
+}
+
+function drawChart(data, label) {
+  const ctx = document.getElementById('priceChart').getContext('2d');
+  if (chartInstance) chartInstance.destroy();
+
+  const now = new Date();
+  const currentHour = now.getHours();
+
+  // For week view, aggregate to hourly (one bar per hour)
+  if (label === '7 päeva') data = aggregateToHourly(data);
+
+  const labels = data.map(d => {
+    const dt = new Date(d.ts);
+    if (label === '7 päeva') {
+      return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)}_${pad(dt.getHours())}`;
+    }
+    return pad(dt.getHours()) + ':' + pad(dt.getMinutes());
+  });
+
+  const prices = data.map(d => displayPrice(parseFloat(euroPerMWh_to_senti(d.price)), d.ts));
+  const colors = prices.map(p => getColor(p));
+
+  // Find current position index for annotation (not for tomorrow)
+  let currentIndex = -1;
+  if (label === '7 päeva') {
+    const nowTs = Date.now();
+    let minDiff = Infinity;
+    data.forEach((d, i) => {
+      const diff = Math.abs(d.ts - nowTs);
+      if (diff < minDiff) { minDiff = diff; currentIndex = i; }
+    });
+  } else if (label === 'Täna') {
+    const nowTs2 = Date.now();
+    const slotStart2 = Math.floor(nowTs2 / 900000) * 900000;
+    currentIndex = data.findIndex(d => d.ts === slotStart2);
+    if (currentIndex < 0) currentIndex = data.reduce((best, d, i) => d.ts <= nowTs2 ? i : best, -1);
+  }
+
+  // Custom plugin for vertical line
+  const currentLinePlugin = {
+    id: 'currentLine',
+    afterDatasetsDraw(chart) {
+      if (currentIndex < 0) return;
+      const { ctx, scales: { x, y } } = chart;
+      const xPos = x.getPixelForValue(currentIndex);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(xPos, y.top);
+      ctx.lineTo(xPos, y.bottom);
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  // Custom plugin: üks punktiirjoon mis järgib päeva/öö fikseeritud paketi hinda
+  const fixedPriceLinePlugin = {
+    id: 'fixedPriceLine',
+    afterDatasetsDraw(chart) {
+      if (!showFullCost) return;
+      const { ctx, scales: { x, y } } = chart;
+      if (!data.length) return;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(160,160,160,0.30)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath();
+      let started = false;
+      data.forEach((d, i) => {
+        const fixVal = isNightTariff(d.ts) ? FIXED_PKG_NIGHT : FIXED_PKG_DAY;
+        const xPos = x.getPixelForValue(i);
+        const yPos = y.getPixelForValue(fixVal);
+        if (!started) { ctx.moveTo(xPos, yPos); started = true; }
+        else ctx.lineTo(xPos, yPos);
+      });
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+  gradient.addColorStop(0, 'rgba(0,229,160,0.3)');
+  gradient.addColorStop(1, 'rgba(0,229,160,0)');
+
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    plugins: [currentLinePlugin, fixedPriceLinePlugin],
+    data: {
+      labels,
+      datasets: [{
+        label: 'Hind (s/kWh)',
+        data: prices,
+        backgroundColor: colors.map(c => c + '99'),
+        borderColor: colors,
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111720',
+          borderColor: '#1e2a38',
+          borderWidth: 1,
+          titleFont: { family: 'Space Mono', size: 11 },
+          bodyFont: { family: 'Space Mono', size: 13 },
+          callbacks: {
+            label: ctx => ` ${ctx.raw} s/kWh`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#4a6080',
+            font: { family: 'Space Mono', size: 9 },
+            maxRotation: 0,
+            autoSkip: false,
+            callback: label === '7 päeva'
+              ? function(val, idx) {
+                  const lbl = labels[idx];
+                  if (!lbl) return '';
+                  const [datePart, hour] = lbl.split('_');
+                  return hour === '00' ? datePart : '';
+                }
+              : function(val, idx) {
+                  const lbl = labels[idx];
+                  if (!lbl) return '';
+                  const [h, m] = lbl.split(':');
+                  return m === '00' ? String(parseInt(h)) : '';
+                }
+          },
+          grid: {
+            color: label === '7 päeva'
+              ? function(ctx2) {
+                  const lbl = labels[ctx2.index] || '';
+                  const hour = lbl.split('_')[1];
+                  return hour === '00' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0)';
+                }
+              : function(ctx2) {
+                  const lbl = labels[ctx2.index] || '';
+                  const m = lbl.split(':')[1];
+                  return m === '00' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0)';
+                }
+          }
+        },
+        y: {
+          ticks: {
+            color: '#4a6080',
+            font: { family: 'Space Mono', size: 10 },
+            callback: v => v + ' s'
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          beginAtZero: true,
+          suggestedMax: showFullCost ? Math.max(FIXED_PKG_DAY, FIXED_PKG_NIGHT) * 1.08 : undefined
+        }
+      }
+    }
+  });
+}
+
+function drawHours(data, currentHour, highlightCurrent) {
+  const grid = document.getElementById('hoursGrid');
+  if (!grid) return;
+
+  if (data.length > 48) {
+    // For week view, show daily averages instead
+    const byDay = {};
+    data.forEach(d => {
+      const dt = new Date(d.ts);
+      const key = formatDate(dt);
+      if (!byDay[key]) byDay[key] = [];
+      byDay[key].push(parseFloat(euroPerMWh_to_senti(d.price)));
+    });
+    grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(110px, 1fr))';
+    grid.innerHTML = Object.entries(byDay).map(([day, prices]) => {
+      const avg = (prices.reduce((a,b)=>a+b,0)/prices.length).toFixed(2);
+      const col = getColor(parseFloat(avg));
+      const bg = col + '22';
+      const [y,m,d2] = day.split('-');
+      const dt = new Date(day);
+      const weekday = dt.toLocaleDateString('et-EE', {weekday:'short'});
+      return `<div class="hour-cell" style="background:${bg}">
+        <div class="hour-num">${weekday} ${d2}.${m}</div>
+        <div class="hour-price" style="color:${col}">${avg}</div>
+        <div class="hour-num">s/kWh</div>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  grid.style.gridTemplateColumns = '';
+  grid.innerHTML = data.map(d => {
+    const dt = new Date(d.ts);
+    const h = dt.getHours();
+    const p = parseFloat(euroPerMWh_to_senti(d.price));
+    const col = getColor(p);
+    const bg = col + '22';
+    const isCurrent = highlightCurrent && h === currentHour;
+    return `<div class="hour-cell ${isCurrent ? 'current-hour' : ''}" style="background:${bg}">
+      <div class="hour-num">${pad(h)}h</div>
+      <div class="hour-price" style="color:${col}">${p}</div>
+    </div>`;
+  }).join('');
+}
+
+function drawNextHours(data, currentHour) {
+  const section = document.getElementById('nextHoursSection');
+  const grid = document.getElementById('nextHoursGrid');
+  if (!grid) return;
+
+  // Get next 8 fifteen-minute slots (skip current, start from next)
+  const upcoming = [];
+  const nowTs = Date.now();
+  const currentSlotTs = Math.floor(nowTs / 900000) * 900000;
+  for (let i = 1; i <= 8; i++) {
+    const slotTs = currentSlotTs + i * 900000;
+    const entry = data.find(d => d.ts === slotTs)
+      || data.find(d => Math.abs(d.ts - slotTs) < 450000 && d.ts >= slotTs - 1000);
+    if (entry) {
+      const dt = new Date(entry.ts);
+      upcoming.push({
+        label: pad(dt.getHours()) + ':' + pad(dt.getMinutes()),
+        ts: entry.ts,
+        price: displayPrice(parseFloat(euroPerMWh_to_senti(entry.price)), entry.ts),
+      });
+    }
+  }
+
+  if (!upcoming.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  grid.innerHTML = upcoming.map((u) => {
+    const col = getColor(u.price);
+    const bg = col + '22';
+    return `<div class="next-hour-card" style="background:${bg}">
+      <div class="next-hour-time">${u.label}</div>
+      <div class="next-hour-price" style="color:${col}">${u.price}</div>
+      <div class="next-hour-unit">s/kWh</div>
+    </div>`;
+  }).join('');
+}
+
+
+async function init() {
+  try {
+    const data = await loadData();
+    if (!data.length) throw new Error('Andmed puuduvad');
+    allData = data;
+    renderApp(data);
+  } catch (err) {
+    document.getElementById('statusText').textContent = 'VIGA';
+    document.getElementById('appContent').innerHTML = `
+      <div class="error-msg">
+        ⚠️ Andmete laadimine ebaõnnestus<br><br>
+        ${err.message}<br><br>
+        Elering API võib olla ajutiselt kättesaamatu.<br>
+        Proovi lehte uuendada.
+      </div>
+    `;
+  }
+}
+
+init();
+// Refresh every 5 min
+setInterval(init, 5 * 60 * 1000);
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js');
+}
+</script>
+</body>
+</html>
